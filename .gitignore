@@ -1,0 +1,9 @@
+node_modules
+dist
+preview-dist
+*.log
+*.tsbuildinfo
+.DS_Store
+.npmrc
+.env.local
+e2e/shots

@@ -1,0 +1,66 @@
+{
+  "name": "@hoangsonle/portal-core",
+  "version": "0.1.0",
+  "description": "Core FE cho web admin/portal: provider, auth adapter, HTTP client, router phân quyền, layout, component dùng chung (React 19 + antd 5 + ProComponents).",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite --config preview/vite.config.ts",
+    "build": "tsc -p tsconfig.build.json --noEmit && vite build",
+    "build:preview": "vite build --config preview/vite.config.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "e2e": "node e2e/run.mjs"
+  },
+  "dependencies": {
+    "axios": "^1.20.0",
+    "zustand": "^5.0.15"
+  },
+  "peerDependencies": {
+    "@ant-design/icons": "^5.6.0",
+    "@ant-design/pro-components": "^2.8.0",
+    "antd": "^5.24.0",
+    "dayjs": "^1.11.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router": "^7.0.0"
+  },
+  "devDependencies": {
+    "@ant-design/icons": "^5.6.1",
+    "@ant-design/pro-components": "^2.8.10",
+    "@ant-design/v5-patch-for-react-19": "^1.0.3",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "antd": "^5.29.3",
+    "dayjs": "^1.11.23",
+    "jsdom": "^26.1.0",
+    "playwright-core": "^1.64.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router": "^7.18.4",
+    "typescript": "~5.9.3",
+    "vite": "^7.3.7",
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^4.1.11",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+  }
+}
