@@ -49,13 +49,17 @@ export const mergeTrees = (a: TreeNode[], b: TreeNode[]): TreeNode[] => {
     const existing = result.find(item => item.value === node.value);
 
     if (!existing) result.push(node);
-    else if (existing.children || node.children) existing.children = mergeTrees(existing.children ?? [], node.children ?? []);
+    else if (existing.children || node.children)
+      existing.children = mergeTrees(existing.children ?? [], node.children ?? []);
   }
 
   return result;
 };
 
-export interface PortalTreeSelectProps<T = any> extends Omit<TreeSelectProps, 'treeData' | 'loading' | 'onSearch' | 'value' | 'onChange'> {
+export interface PortalTreeSelectProps<T = any> extends Omit<
+  TreeSelectProps,
+  'treeData' | 'loading' | 'onSearch' | 'value' | 'onChange'
+> {
   request?: (params: SelectRequestParams) => Promise<SelectResponse<T>>;
   requestParams?: SelectRequestParams;
   treeSelectKey: TreeSelectKey;

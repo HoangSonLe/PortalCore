@@ -36,7 +36,10 @@ export interface UserQuery {
 
 export const userApi = {
   /** Dùng thẳng làm `request` của PortalTable: nhận (params, sort) của ProTable, trả `{ data, total }`. */
-  list: async (params: UserQuery = {}, sort: Record<string, 'ascend' | 'descend' | null> = {}): Promise<PageResult<User>> => {
+  list: async (
+    params: UserQuery = {},
+    sort: Record<string, 'ascend' | 'descend' | null> = {},
+  ): Promise<PageResult<User>> => {
     const [sortField, sortOrder] = Object.entries(sort).find(([, order]) => order) ?? [];
     const res = await http.get<{ items: User[]; totalItems: number }>('/users', {
       params: { ...params, sortField, sortOrder },
@@ -99,7 +102,8 @@ export interface Device {
 export const catalogApi = {
   units: (options: SelectRequestParams) => http.get<Unit[]>('/units', options),
   provinces: (options: SelectRequestParams) => http.get<{ id: number; name: string }[]>('/provinces', options),
-  districts: (options: SelectRequestParams) => http.get<{ id: string; name: string }[]>('/provinces/:id/districts', options),
+  districts: (options: SelectRequestParams) =>
+    http.get<{ id: string; name: string }[]>('/provinces/:id/districts', options),
   devices: () => http.get<Device[]>('/devices'),
 };
 

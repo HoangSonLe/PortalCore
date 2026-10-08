@@ -19,7 +19,14 @@ export interface PortalDownloadButtonProps {
 }
 
 /** Nút tải file (giống PortalDownloadButton bên Kit cũ) — nút tự loading tới khi tải xong. */
-export const PortalDownloadButton = ({ url, filename, params, method = 'get', body, buttonProps = {} }: PortalDownloadButtonProps) => {
+export const PortalDownloadButton = ({
+  url,
+  filename,
+  params,
+  method = 'get',
+  body,
+  buttonProps = {},
+}: PortalDownloadButtonProps) => {
   const http = useHttp();
   const { onClick, ...rest } = buttonProps;
 

@@ -18,7 +18,13 @@ export interface TransferSideFilter<T> {
 
 export type TransferFilter<T> = Record<TransferDirection, TransferSideFilter<T>>;
 
-const FilterForm = <T,>({ config, onChange }: { config: TransferSideFilter<T>; onChange: (values: Record<string, any>) => void }) => {
+const FilterForm = <T,>({
+  config,
+  onChange,
+}: {
+  config: TransferSideFilter<T>;
+  onChange: (values: Record<string, any>) => void;
+}) => {
   const [form] = Form.useForm();
 
   return (
@@ -50,12 +56,20 @@ const useSideFilters = <T,>(filter?: TransferFilter<T>) => {
     filter ? items.filter(item => filter[direction].onFilter(params[direction], item)) : items;
 
   const renderForm = (direction: TransferDirection) =>
-    filter ? <FilterForm config={filter[direction]} onChange={values => setParams(prev => ({ ...prev, [direction]: values }))} /> : null;
+    filter ? (
+      <FilterForm
+        config={filter[direction]}
+        onChange={values => setParams(prev => ({ ...prev, [direction]: values }))}
+      />
+    ) : null;
 
   return { apply, renderForm };
 };
 
-export interface PortalTableTransferProps<T> extends Omit<TransferProps<any>, 'rowKey' | 'dataSource' | 'targetKeys' | 'onChange' | 'children'> {
+export interface PortalTableTransferProps<T> extends Omit<
+  TransferProps<any>,
+  'rowKey' | 'dataSource' | 'targetKeys' | 'onChange' | 'children'
+> {
   dataSource: T[];
   leftColumns: TableColumnsType<T>;
   rightColumns: TableColumnsType<T>;
@@ -97,7 +111,9 @@ export const PortalTableTransfer = <T extends object>({
       nextKeys.map(key => {
         const item = dataSource.find(row => getByPath(row, rowKey) === key);
 
-        return Object.fromEntries(valueFormatter.valueItems.map(({ dataIndex, name }) => [name ?? dataIndex, getByPath(item, dataIndex)]));
+        return Object.fromEntries(
+          valueFormatter.valueItems.map(({ dataIndex, name }) => [name ?? dataIndex, getByPath(item, dataIndex)]),
+        );
       }),
     );
   };
@@ -243,7 +259,9 @@ export const PortalTableCountTransfer = <T extends object>({
 
             return {
               [valueKey]: getByPath(item, rowKey),
-              ...Object.fromEntries(valueItems.map(({ dataIndex, name }) => [name ?? dataIndex, getByPath(item, dataIndex)])),
+              ...Object.fromEntries(
+                valueItems.map(({ dataIndex, name }) => [name ?? dataIndex, getByPath(item, dataIndex)]),
+              ),
             };
           })();
 
@@ -305,7 +323,10 @@ export const PortalTableCountTransfer = <T extends object>({
                 getCheckboxProps: row => ({ disabled: disabled || row._max === 0 }),
                 onSelect: toggle,
                 onSelectAll: selected =>
-                  setPending(prev => ({ ...prev, ...Object.fromEntries(sideRows.map(row => [row._id, selected ? row._max : 0])) })),
+                  setPending(prev => ({
+                    ...prev,
+                    ...Object.fromEntries(sideRows.map(row => [row._id, selected ? row._max : 0])),
+                  })),
               }}
               onRow={row => ({ style: { cursor: 'pointer' }, onClick: () => !disabled && toggle(row) })}
             />

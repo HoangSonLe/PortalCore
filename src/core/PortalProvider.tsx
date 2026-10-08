@@ -7,7 +7,7 @@ import type { StorageOption } from '../stores/storage';
 import type { ThemeOptions } from '../theme/theme';
 import type { AppInfo, LayoutOptions, PageOverrides, PortalContextValue } from './context';
 import type { ConfigProviderProps } from 'antd';
-import type { ReactNode } from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
 
 import { App as AntdApp, ConfigProvider } from 'antd';
 import enUS from 'antd/locale/en_US';
@@ -25,6 +25,7 @@ import { createAuthStore } from '../stores/authStore';
 import { resolveStorage } from '../stores/storage';
 import { buildTheme } from '../theme/theme';
 import { PortalContext, usePortal } from './context';
+import { clearChunkReloadFlag, reloadOnceForNewVersion } from './ErrorBoundary';
 
 export interface PortalProviderProps {
   app: AppInfo;
@@ -52,6 +53,8 @@ export interface PortalProviderProps {
   antd?: Omit<ConfigProviderProps, 'theme' | 'locale' | 'children'>;
   /** Render trong provider, ngoài router — cho listener toàn cục (realtime, analytics...). */
   children?: ReactNode;
+  /** Nhận lỗi render (đã được ErrorBoundary chặn) để gửi Sentry / log server. */
+  onError?: (error: Error, info: ErrorInfo) => void;
 }
 
 const antdLocales = { vi: viVN, en: enUS } as const;
@@ -67,7 +70,8 @@ const HttpNotifierBridge = () => {
   useEffect(() => {
     http.setNotifier({
       success: message => notification.success({ message: t('http.success'), description: message }),
-      error: message => notification.error({ message: t('http.error'), description: message ?? t('http.error.default') }),
+      error: message =>
+        notification.error({ message: t('http.error'), description: message ?? t('http.error.default') }),
     });
 
     return () => http.setNotifier(undefined);
@@ -105,6 +109,7 @@ export const PortalProvider = ({
   pages = EMPTY_PAGES,
   antd,
   children,
+  onError,
 }: PortalProviderProps) => {
   const locales = i18n?.locales ?? ['vi', 'en'];
   const defaultLocale = i18n?.defaultLocale ?? locales[0] ?? 'vi';
@@ -122,8 +127,42 @@ export const PortalProvider = ({
 
     if (!auth) authStore.setState({ status: 'authenticated', permissions: [] });
 
-    return { authStore, appStore, authService };
+    return { authStore, appStore, authService, storageKey: key };
   });
+
+  useEffect(() => {
+    const onPreloadError = (event: Event) => {
+      if (reloadOnceForNewVersion()) event.preventDefault();
+    };
+    const timer = setTimeout(clearChunkReloadFlag, 10_000);
+
+    window.addEventListener('vite:preloadError', onPreloadError);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('vite:preloadError', onPreloadError);
+    };
+  }, []);
+
+  // Đăng nhập / đăng xuất / đổi giao diện ở tab khác -> tab này cập nhật theo (sự kiện `storage` chỉ bắn ở tab khác).
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === `${core.storageKey}:auth`) {
+        void Promise.resolve(core.authStore.persist.rehydrate()).then(() => {
+          const { tokens, status } = core.authStore.getState();
+
+          if (!tokens?.accessToken) core.authStore.getState().clear();
+          else if (status === 'anonymous') core.authStore.setState({ status: 'checking' });
+        });
+      } else if (event.key === `${core.storageKey}:app`) {
+        void core.appStore.persist.rehydrate();
+      }
+    };
+
+    window.addEventListener('storage', onStorage);
+
+    return () => window.removeEventListener('storage', onStorage);
+  }, [core]);
 
   // Layout effect chạy trước mọi useEffect của component con -> handler sẵn sàng trước request đầu tiên.
   useLayoutEffect(() => {
@@ -162,9 +201,11 @@ export const PortalProvider = ({
       layout,
       pages,
       basePath,
+      storageKey: core.storageKey,
+      onError,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [app, routes, http, auth, core, env, t, layout, pages, basePath, locales.join(',')],
+    [app, routes, http, auth, core, env, t, layout, pages, basePath, onError, locales.join(',')],
   );
 
   const antdTheme = useMemo(() => buildTheme(themeMode, theme), [themeMode, theme]);

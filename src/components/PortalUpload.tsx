@@ -16,7 +16,13 @@ export interface PortalUploadProps extends Omit<UploadProps, 'children'> {
 }
 
 /** Upload nhiều ảnh dạng thẻ, bấm vào để xem lớn (giống PortalUpload bên Kit cũ). */
-export const PortalUpload = ({ maxCount = 8, uploadButton, fileList: controlled, onChange, ...props }: PortalUploadProps) => {
+export const PortalUpload = ({
+  maxCount = 8,
+  uploadButton,
+  fileList: controlled,
+  onChange,
+  ...props
+}: PortalUploadProps) => {
   const t = useT();
   const [innerList, setInnerList] = useState<UploadFile[]>([]);
   const [preview, setPreview] = useState<string>();
@@ -31,7 +37,9 @@ export const PortalUpload = ({ maxCount = 8, uploadButton, fileList: controlled,
         {...props}
         fileList={fileList}
         onPreview={async file => {
-          setPreview(file.url ?? file.thumbUrl ?? (file.originFileObj ? await readAsDataURL(file.originFileObj) : undefined));
+          setPreview(
+            file.url ?? file.thumbUrl ?? (file.originFileObj ? await readAsDataURL(file.originFileObj) : undefined),
+          );
         }}
         onChange={info => {
           if (!controlled) setInnerList(info.fileList);
@@ -130,7 +138,9 @@ export const PortalUploadAvatar = ({
         }
       }}
     >
-      <div style={{ width, height, display: 'grid', placeItems: 'center', overflow: 'hidden', borderRadius: 'inherit' }}>
+      <div
+        style={{ width, height, display: 'grid', placeItems: 'center', overflow: 'hidden', borderRadius: 'inherit' }}
+      >
         {value && !loading ? (
           <img src={value} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (

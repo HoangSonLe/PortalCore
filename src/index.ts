@@ -60,8 +60,16 @@ export { PortalInput, PortalInputTextArea, transformText } from './components/Po
 export type { PortalInputProps, PortalInputTextAreaProps, TextType } from './components/PortalInput';
 export { formatThousands, PortalNumberInput } from './components/PortalNumberInput';
 export type { PortalNumberInputProps } from './components/PortalNumberInput';
-export { getDateFormat, normalizeRange, PortalDatePicker, PortalRangePicker, useRangePresets } from './components/PortalDatePicker';
-export type { PortalDatePickerProps, PortalRangePickerProps } from './components/PortalDatePicker';
+export {
+  formatDateValue,
+  getDateFormat,
+  normalizeRange,
+  parseDateValue,
+  PortalDatePicker,
+  PortalRangePicker,
+  useRangePresets,
+} from './components/PortalDatePicker';
+export type { DateValueFormat, PortalDatePickerProps, PortalRangePickerProps } from './components/PortalDatePicker';
 export { PortalDownloadButton } from './components/PortalDownloadButton';
 export type { PortalDownloadButtonProps } from './components/PortalDownloadButton';
 export { PortalUpload, PortalUploadAvatar } from './components/PortalUpload';
@@ -81,6 +89,8 @@ export type {
 } from './components/PortalTableTransfer';
 export { ReadOnlyProvider } from './components/ReadOnly';
 export { PortalTable } from './components/PortalTable';
+export { PortalModalForm } from './components/PortalModalForm';
+export type { PortalModalFormProps } from './components/PortalModalForm';
 export type { PortalTableAction, PortalTableProps, PortalTableSearchItem } from './components/PortalTable';
 export { PageContainer } from './components/PageContainer';
 export type { PageContainerProps } from './components/PageContainer';
@@ -89,6 +99,8 @@ export type { Mapping, MappingItem, StatusTagProps } from './components/StatusTa
 
 // Hooks
 export { useDisclosure } from './hooks/useDisclosure';
+export { useCrudPage } from './hooks/useCrudPage';
+export type { UseCrudPageOptions } from './hooks/useCrudPage';
 export { useRequest } from './hooks/useRequest';
 export type { UseRequestOptions } from './hooks/useRequest';
 
@@ -101,6 +113,10 @@ export { darkTheme, lightTheme } from './theme/themes';
 export type { ThemeMode } from './stores/appStore';
 export type { StorageOption } from './stores/storage';
 export { readRuntimeEnv } from './env/runtimeEnv';
+export { ErrorBoundary, isChunkLoadError } from './core/ErrorBoundary';
+export type { ErrorBoundaryProps } from './core/ErrorBoundary';
+export { createMockAdapter, MockError, MockFile, mockFile } from './dev/mockAdapter';
+export type { MockAdapterOptions, MockContext, MockHandler, MockRoute } from './dev/mockAdapter';
 export { buildPath, joinPath, safeRedirectPath } from './utils/url';
 export { getByPath, includesText, removeVietnameseTones } from './utils/string';
 export { filenameFromDisposition, readAsDataURL, saveBlob } from './utils/file';

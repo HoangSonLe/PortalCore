@@ -40,8 +40,10 @@ export const hasRequiredParams = (
   ((required.pathVars ?? []).every(key => !!requestParams?.pathVars?.[key]) &&
     (required.params ?? []).every(key => !!requestParams?.params?.[key]));
 
-export interface PortalSelectProps<T = any>
-  extends Omit<SelectProps, 'options' | 'loading' | 'onSearch' | 'filterOption' | 'value' | 'onChange'> {
+export interface PortalSelectProps<T = any> extends Omit<
+  SelectProps,
+  'options' | 'loading' | 'onSearch' | 'filterOption' | 'value' | 'onChange'
+> {
   /** Gọi API lấy danh sách, vd `opts => http.get('/roles', opts)`. */
   request?: (params: SelectRequestParams) => Promise<SelectResponse<T>>;
   requestParams?: SelectRequestParams;
@@ -157,16 +159,17 @@ export const PortalSelect = <T,>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paramsKey, serverSearch, JSON.stringify(requiredParamKeys ?? {})]);
 
-  const keyOf = (item: unknown) => (item && typeof item === 'object' ? getByPath(item, customValueKey ?? valueKey) : item);
+  const keyOf = (item: unknown) =>
+    item && typeof item === 'object' ? getByPath(item, customValueKey ?? valueKey) : item;
   const selectValue = customValue ? (Array.isArray(value) ? value.map(keyOf) : keyOf(value)) : value;
 
   const options = useMemo(() => {
     const ignored = new Set(ignoreValueList ?? []);
     const fromItems = items.map(toOption).filter(option => !ignored.has(option.value));
     const seen = new Set(fromItems.map(option => option.value));
-    const selectedKeys = (Array.isArray(selectValue) ? selectValue : selectValue !== undefined ? [selectValue] : []).filter(
-      key => !seen.has(key) && cacheRef.current.has(key),
-    );
+    const selectedKeys = (
+      Array.isArray(selectValue) ? selectValue : selectValue !== undefined ? [selectValue] : []
+    ).filter(key => !seen.has(key) && cacheRef.current.has(key));
     const selectedOptions = selectedKeys.map(key => toOption(cacheRef.current.get(key)!));
     const extras = (extraOptions ?? []).filter(option => !seen.has(option.value));
 

@@ -143,7 +143,9 @@ describe('createHttpClient', () => {
 
     http.setAuthHandlers({ getAccessToken: () => undefined, refreshAccessToken, onUnauthorized });
 
-    const error = await http.post<never>('/auth/login', {}, { skipAuth: true, skipRefresh: true }).catch((e: HttpError) => e);
+    const error = await http
+      .post<never>('/auth/login', {}, { skipAuth: true, skipRefresh: true })
+      .catch((e: HttpError) => e);
 
     expect(error).toBeInstanceOf(HttpError);
     expect(error.serverMessage).toBe('Sai mật khẩu');

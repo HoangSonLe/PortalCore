@@ -5,6 +5,7 @@ import { Flex, Spin } from 'antd';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router';
 
 import { usePortal } from '../core/context';
+import { ErrorBoundary } from '../core/ErrorBoundary';
 import { useAuth, usePermission, useT } from '../core/hooks';
 import { AppLayout } from '../layouts/AppLayout';
 import { AuthLayout } from '../layouts/AuthLayout';
@@ -133,11 +134,13 @@ const AppRoutes = () => {
 };
 
 export const PortalRouter = () => {
-  const { basePath } = usePortal();
+  const { basePath, onError } = usePortal();
 
   return (
-    <BrowserRouter basename={basePath}>
-      <AppRoutes />
-    </BrowserRouter>
+    <ErrorBoundary onError={onError}>
+      <BrowserRouter basename={basePath}>
+        <AppRoutes />
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 };

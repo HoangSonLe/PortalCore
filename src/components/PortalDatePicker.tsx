@@ -4,11 +4,33 @@ import type { Dayjs } from 'dayjs';
 
 import { DatePicker } from 'antd';
 import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
 
 import { useT } from '../core/hooks';
 import { ReadOnlyProvider } from './ReadOnly';
 
+dayjs.extend(customParseFormat);
+
 type Picker = DatePickerProps['picker'];
+
+/**
+ * Cách lưu giá trị:
+ * - `'iso'` (mặc định, giống Kit): chuỗi ISO giờ UTC, vd `2026-10-07T17:00:00.000Z` — hợp với cột timestamp.
+ * - chuỗi định dạng dayjs, vd `'YYYY-MM-DD'`: lưu đúng ngày người dùng chọn, không lệch múi giờ —
+ *   nên dùng cho ngày sinh, ngày hiệu lực... (cột `date` / `DateOnly` của .NET).
+ */
+export type DateValueFormat = 'iso' | (string & {});
+
+export const parseDateValue = (value: string | null | undefined, valueFormat: DateValueFormat = 'iso') => {
+  if (!value) return undefined;
+
+  const parsed = valueFormat === 'iso' ? dayjs(value) : dayjs(value, valueFormat, true);
+
+  return parsed.isValid() ? parsed : undefined;
+};
+
+export const formatDateValue = (date: Dayjs, valueFormat: DateValueFormat = 'iso') =>
+  valueFormat === 'iso' ? date.toISOString() : date.format(valueFormat);
 
 /** Định dạng hiển thị kiểu Việt Nam theo loại picker (giống Kit cũ). */
 export const getDateFormat = (picker: Picker, showTime?: unknown) => {
@@ -27,14 +49,14 @@ export const getDateFormat = (picker: Picker, showTime?: unknown) => {
   }
 };
 
-const toDayjs = (value?: string | null) => (value && dayjs(value).isValid() ? dayjs(value) : undefined);
-
 export interface PortalDatePickerProps extends Omit<DatePickerProps, 'value' | 'defaultValue' | 'onChange'> {
-  /** Chuỗi ISO. */
+  /** Chuỗi theo `valueFormat` (mặc định ISO). */
   value?: string;
   defaultValue?: string;
-  /** Trả chuỗi ISO, hoặc `undefined` khi xoá. */
+  /** Trả chuỗi theo `valueFormat`, hoặc `undefined` khi xoá. */
   onChange?: (value?: string) => void;
+  /** `'iso'` (mặc định) hoặc định dạng dayjs như `'YYYY-MM-DD'` cho ô chỉ có ngày. */
+  valueFormat?: DateValueFormat;
   readOnly?: boolean;
 }
 
@@ -43,6 +65,7 @@ export const PortalDatePicker = ({
   value,
   defaultValue,
   onChange,
+  valueFormat = 'iso',
   readOnly = false,
   disabled = false,
   ...props
@@ -53,9 +76,9 @@ export const PortalDatePicker = ({
       style={{ width: '100%' }}
       {...props}
       disabled={readOnly || disabled}
-      value={toDayjs(value)}
-      defaultValue={toDayjs(defaultValue)}
-      onChange={date => onChange?.(date && date.isValid() ? date.toISOString() : undefined)}
+      value={parseDateValue(value, valueFormat)}
+      defaultValue={parseDateValue(defaultValue, valueFormat)}
+      onChange={date => onChange?.(date && date.isValid() ? formatDateValue(date, valueFormat) : undefined)}
     />
   </ReadOnlyProvider>
 );
@@ -90,6 +113,8 @@ export interface PortalRangePickerProps extends Omit<RangePickerProps, 'value' |
   onChange?: (value?: [string, string]) => void;
   /** Dùng bộ chọn nhanh có sẵn (Hôm nay, Tuần này...). Mặc định true. */
   usePortalPresets?: boolean;
+  /** `'iso'` (mặc định) hoặc định dạng dayjs như `'YYYY-MM-DD'`. */
+  valueFormat?: DateValueFormat;
   readOnly?: boolean;
 }
 
@@ -99,6 +124,7 @@ export const PortalRangePicker = ({
   onChange,
   usePortalPresets = true,
   presets,
+  valueFormat = 'iso',
   readOnly = false,
   disabled = false,
   ...props
@@ -113,8 +139,19 @@ export const PortalRangePicker = ({
         {...props}
         presets={usePortalPresets ? portalPresets : presets}
         disabled={readOnly || disabled}
-        value={value ? [toDayjs(value[0]) ?? null, toDayjs(value[1]) ?? null] : undefined}
-        defaultValue={defaultValue ? [toDayjs(defaultValue[0]) ?? null, toDayjs(defaultValue[1]) ?? null] : undefined}
+        value={
+          value
+            ? [parseDateValue(value[0], valueFormat) ?? null, parseDateValue(value[1], valueFormat) ?? null]
+            : undefined
+        }
+        defaultValue={
+          defaultValue
+            ? [
+                parseDateValue(defaultValue[0], valueFormat) ?? null,
+                parseDateValue(defaultValue[1], valueFormat) ?? null,
+              ]
+            : undefined
+        }
         onChange={dates => {
           if (!dates?.[0] || !dates[1]) {
             onChange?.(undefined);
@@ -124,7 +161,7 @@ export const PortalRangePicker = ({
 
           const [start, end] = normalizeRange(dates[0], dates[1], props.picker, props.showTime);
 
-          onChange?.([start.toISOString(), end.toISOString()]);
+          onChange?.([formatDateValue(start, valueFormat), formatDateValue(end, valueFormat)]);
         }}
       />
     </ReadOnlyProvider>

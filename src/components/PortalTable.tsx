@@ -4,7 +4,9 @@ import type { ReactNode } from 'react';
 
 import { ProTable } from '@ant-design/pro-components';
 import { useMemo } from 'react';
+import { useLocation } from 'react-router';
 
+import { usePortal } from '../core/context';
 import { useT } from '../core/hooks';
 import { PortalTableActionButton } from './PortalTableActionButton';
 
@@ -30,6 +32,11 @@ export interface PortalTableProps<
   actionColumn?: PortalTableAction<DataType>;
   /** Ô tìm kiếm không gắn với cột nào. */
   searchFormItems?: PortalTableSearchItem[];
+  /**
+   * Nhớ cài đặt cột (ẩn/hiện, thứ tự, ghim) vào localStorage. Mặc định bật, khoá theo URL trang.
+   * Truyền string để đặt khoá riêng (trang có nhiều bảng), `false` để tắt.
+   */
+  persistColumns?: boolean | string;
 }
 
 /**
@@ -52,9 +59,17 @@ export const PortalTable = <
   pagination,
   options,
   scroll,
+  persistColumns = true,
+  columnsState,
   ...props
 }: PortalTableProps<DataType, Params, ValueType>) => {
   const t = useT();
+  const { pathname } = useLocation();
+  const { storageKey } = usePortal();
+  const persistenceKey =
+    persistColumns === false
+      ? undefined
+      : `${storageKey}:table:${typeof persistColumns === 'string' ? persistColumns : pathname}`;
 
   const finalColumns = useMemo(() => {
     const indexColumns: ProColumns<DataType, ValueType>[] =
@@ -99,7 +114,9 @@ export const PortalTable = <
         ]
       : [];
 
-    const dataColumns = (columns ?? []).map(column => ({ search: false, ...column }) as ProColumns<DataType, ValueType>);
+    const dataColumns = (columns ?? []).map(
+      column => ({ search: false, ...column }) as ProColumns<DataType, ValueType>,
+    );
 
     return [...indexColumns, ...dataColumns, ...searchColumns, ...actionColumns];
   }, [columns, indexColumn, actionColumn, searchFormItems, t]);
@@ -119,6 +136,7 @@ export const PortalTable = <
       }
       scroll={{ x: 'max-content', ...scroll }}
       dateFormatter="string"
+      columnsState={columnsState ?? (persistenceKey ? { persistenceKey, persistenceType: 'localStorage' } : undefined)}
       request={
         request
           ? async (...args) => {

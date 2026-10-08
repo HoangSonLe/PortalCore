@@ -45,8 +45,16 @@ export const createHttpClient = (options: HttpClientOptions = {}): HttpClient =>
   };
 
   const toAxiosConfig = (method: HttpMethod, url: string, requestOptions: RequestOptions = {}): AxiosRequestConfig => {
-    const { pathVars, params, body, notify: _notify, skipAuth, skipRefresh: _skipRefresh, headers, ...rest } =
-      requestOptions;
+    const {
+      pathVars,
+      params,
+      body,
+      notify: _notify,
+      skipAuth,
+      skipRefresh: _skipRefresh,
+      headers,
+      ...rest
+    } = requestOptions;
     const finalHeaders: Record<string, string> = {};
 
     for (const [key, value] of Object.entries(getHeaders?.() ?? {})) {

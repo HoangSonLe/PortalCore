@@ -65,7 +65,8 @@ export const toHttpError = async (
     const status = error.response?.status;
     const data = await readBlobData(error.response?.data);
     const serverMessage = getErrorMessage(data);
-    const message = serverMessage ?? (status ? `Request failed with status ${status}` : error.message || 'Network error');
+    const message =
+      serverMessage ?? (status ? `Request failed with status ${status}` : error.message || 'Network error');
 
     return new HttpError(message, { status, data, url: error.config?.url, serverMessage, cause: error });
   }

@@ -68,7 +68,11 @@ await modal.getByLabel('Tên đăng nhập').fill('test.user');
 await modal.getByLabel('Email').fill('admin@demo.local');
 await modal.getByRole('button', { name: /OK|Xác nhận|Đồng ý|确 定|确定/ }).click();
 const toast = await page.locator('.ant-notification-notice').first().textContent({ timeout: 5000 });
-check('Email trùng -> toast lỗi server, modal vẫn mở', toast?.includes('Email đã tồn tại') && (await modal.isVisible()), toast);
+check(
+  'Email trùng -> toast lỗi server, modal vẫn mở',
+  toast?.includes('Email đã tồn tại') && (await modal.isVisible()),
+  toast,
+);
 await page.screenshot({ path: OUT + '03-create-error.png' });
 await modal.getByLabel('Email').fill('test.user@demo.local');
 await modal.getByRole('button', { name: /OK|Xác nhận|Đồng ý|确 定|确定/ }).click();
@@ -82,14 +86,22 @@ await page.waitForURL(/\/system\/users\/\d+$/);
 await page.locator('.ant-descriptions').waitFor();
 const crumbs = (await page.locator('.ant-breadcrumb').textContent()) ?? '';
 const selectedMenu = (await page.locator('.ant-menu-item-selected').first().textContent()) ?? '';
-check('Trang chi tiết: breadcrumb đúng, menu "Người dùng" được chọn', crumbs.includes('Hệ thống') && crumbs.includes('Chi tiết') && selectedMenu.includes('Người dùng'), `${crumbs} | menu: ${selectedMenu}`);
+check(
+  'Trang chi tiết: breadcrumb đúng, menu "Người dùng" được chọn',
+  crumbs.includes('Hệ thống') && crumbs.includes('Chi tiết') && selectedMenu.includes('Người dùng'),
+  `${crumbs} | menu: ${selectedMenu}`,
+);
 
 // 6. Demo refresh token
 await page.getByRole('menuitem', { name: /Tổng quan/ }).click();
 await page.waitForURL(/\/dashboard$/);
 await page.getByRole('button', { name: 'Chạy thử' }).click();
 const refreshLog = await page.locator('.ant-alert-success').textContent({ timeout: 15000 });
-check('Token hết hạn + 5 request song song -> 5/5 OK, refresh 1 lần, /users nhận đúng 10 request', /5\/5 thành công · refresh được gọi 1 lần · API \/users nhận 10 request/.test(refreshLog ?? ''), refreshLog);
+check(
+  'Token hết hạn + 5 request song song -> 5/5 OK, refresh 1 lần, /users nhận đúng 10 request',
+  /5\/5 thành công · refresh được gọi 1 lần · API \/users nhận 10 request/.test(refreshLog ?? ''),
+  refreshLog,
+);
 await page.screenshot({ path: OUT + '04-dashboard-refresh.png' });
 
 // 7. Dark mode + English
@@ -139,7 +151,11 @@ const presets = page.locator('.ant-picker-presets li');
 await presets.first().waitFor();
 const presetLabels = await presets.allInnerTexts();
 await presets.filter({ hasText: 'Hôm nay' }).click();
-check('PortalRangePicker có chọn nhanh (Hôm nay, Tuần này...)', presetLabels.includes('Tuần này') && presetLabels.length === 5, presetLabels.join(', '));
+check(
+  'PortalRangePicker có chọn nhanh (Hôm nay, Tuần này...)',
+  presetLabels.includes('Tuần này') && presetLabels.length === 5,
+  presetLabels.join(', '),
+);
 await page.getByLabel('Tỉnh/Thành (PortalSelect)').click();
 await page.locator('.ant-select-item-option', { hasText: 'Hà Nội' }).click();
 await page.getByLabel('Quận/Huyện — phụ thuộc Tỉnh (requiredParamKeys)').click();
@@ -164,13 +180,21 @@ check('PortalBlobImage tải ảnh có token (blob URL)', true);
 const downloadPromise = page.waitForEvent('download');
 await page.getByRole('button', { name: 'Tải file mẫu', exact: true }).click();
 const download = await downloadPromise;
-check('PortalDownloadButton tải file, lấy tên từ Content-Disposition', download.suggestedFilename() === 'mau-nhap-nguoi-dung.csv', download.suggestedFilename());
+check(
+  'PortalDownloadButton tải file, lấy tên từ Content-Disposition',
+  download.suggestedFilename() === 'mau-nhap-nguoi-dung.csv',
+  download.suggestedFilename(),
+);
 const csvPath = OUT + 'import.csv';
 await download.saveAs(csvPath);
 await page.locator('.ant-upload-drag input[type=file]').setInputFiles(csvPath);
 await page.locator('.ant-table-row', { hasText: 'nguyen.van.mau' }).waitFor({ timeout: 5000 });
 const sheetPreview = await page.locator('text=Giá trị:').last().locator('code').innerText();
-check('PortalSheetUpload đọc Excel/CSV → bảng xem trước + giá trị đã map', sheetPreview.includes('"username":"tran.thi.thu"'), sheetPreview.slice(0, 120));
+check(
+  'PortalSheetUpload đọc Excel/CSV → bảng xem trước + giá trị đã map',
+  sheetPreview.includes('"username":"tran.thi.thu"'),
+  sheetPreview.slice(0, 120),
+);
 await page.screenshot({ path: OUT + '11-components-file.png', fullPage: true });
 
 await page.getByRole('tab', { name: 'Bảng chuyển' }).click();
@@ -182,12 +206,19 @@ const countTransfer = page.locator('.ant-transfer').nth(1);
 await countTransfer.locator('.ant-transfer-list').first().locator('.ant-table-row', { hasText: 'Đầu ghi NVR' }).click();
 await countTransfer.locator('.ant-transfer-operation button').first().click();
 const allocationPreview = await page.locator('text=Giá trị:').last().locator('code').innerText();
-check('PortalTableCountTransfer chuyển theo số lượng', allocationPreview.includes('"deviceId":"NVR"') && allocationPreview.includes('"quantity":4'), allocationPreview);
+check(
+  'PortalTableCountTransfer chuyển theo số lượng',
+  allocationPreview.includes('"deviceId":"NVR"') && allocationPreview.includes('"quantity":4'),
+  allocationPreview,
+);
 await page.screenshot({ path: OUT + '12-components-transfer.png', fullPage: true });
 await page.goto(`${BASE}/dashboard`);
 
 // 9. Logout -> viewer: menu ẩn Cài đặt, không có nút Thêm/Sửa/Xoá, URL trực tiếp -> 403
-await page.locator('.ant-layout-header').getByRole('button', { name: /Quản trị viên/ }).click();
+await page
+  .locator('.ant-layout-header')
+  .getByRole('button', { name: /Quản trị viên/ })
+  .click();
 await page.getByRole('menuitem', { name: /Đăng xuất/ }).click();
 await page.waitForURL(/\/auth\/login/);
 check('Đăng xuất -> về trang login', true);
@@ -200,7 +231,11 @@ await page.getByRole('menuitem', { name: /Người dùng/ }).click();
 await page.locator('.ant-table-row').first().waitFor();
 const viewerButtons = await page.locator('.ant-table-row').first().locator('td').last().locator('button').count();
 const createBtn = await page.getByRole('button', { name: /Thêm mới/ }).count();
-check('Viewer: chỉ còn nút Xem, không có nút Thêm mới', viewerButtons === 1 && createBtn === 0, `${viewerButtons} nút, thêm mới=${createBtn}`);
+check(
+  'Viewer: chỉ còn nút Xem, không có nút Thêm mới',
+  viewerButtons === 1 && createBtn === 0,
+  `${viewerButtons} nút, thêm mới=${createBtn}`,
+);
 await page.screenshot({ path: OUT + '06-users-viewer.png' });
 await page.goto(`${BASE}/system/settings`);
 await page.locator('.ant-result-403').waitFor({ timeout: 8000 });

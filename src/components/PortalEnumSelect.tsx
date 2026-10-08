@@ -14,7 +14,7 @@ export interface PortalEnumSelectProps extends Omit<SelectProps, 'options'> {
   /** Nhãn = `t(`${prefixLocale}.${key}`)`; không có bản dịch thì hiện chính key. */
   prefixLocale?: string;
   /** Dùng mapping khai báo bằng `createMapping` thay cho enum. */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   mapping?: Mapping<any>;
   ignoreKeyList?: (string | number)[];
   /** Thêm lựa chọn "Tất cả" ở đầu. */
@@ -56,7 +56,9 @@ export const PortalEnumSelect = ({
       ? mapping.toOptions(t)
       : (Array.isArray(data) ? data : Object.values(data ?? {}))
           // Enum số của TS có cả ánh xạ ngược (0 -> 'A'), chỉ lấy giá trị thật.
-          .filter(key => (Array.isArray(data) ? true : typeof key === 'string' || !Object.prototype.hasOwnProperty.call(data, key)))
+          .filter(key =>
+            Array.isArray(data) ? true : typeof key === 'string' || !Object.prototype.hasOwnProperty.call(data, key),
+          )
           .map(key => ({ value: key, label: translate(key) }));
 
     const filtered = list.filter(option => !ignored.has(option.value));

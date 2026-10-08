@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import { describe, expect, it } from 'vitest';
 
-import { getDateFormat, normalizeRange } from '../src/components/PortalDatePicker';
+import { formatDateValue, getDateFormat, normalizeRange, parseDateValue } from '../src/components/PortalDatePicker';
 import { transformText } from '../src/components/PortalInput';
 import { formatThousands } from '../src/components/PortalNumberInput';
 import { hasRequiredParams, toList } from '../src/components/PortalSelect';
@@ -62,6 +62,22 @@ describe('PortalDatePicker', () => {
   });
 });
 
+describe('PortalDatePicker valueFormat', () => {
+  it("'YYYY-MM-DD' giữ đúng ngày đã chọn, không lệch múi giờ", () => {
+    const picked = dayjs('2026-10-08T00:00:00');
+
+    expect(formatDateValue(picked, 'YYYY-MM-DD')).toBe('2026-10-08');
+    expect(parseDateValue('2026-10-08', 'YYYY-MM-DD')?.date()).toBe(8);
+    expect(parseDateValue('08/10/2026', 'YYYY-MM-DD')).toBeUndefined();
+  });
+
+  it("'iso' (mặc định) trả chuỗi ISO", () => {
+    expect(formatDateValue(dayjs('2026-10-08T00:00:00Z'))).toBe('2026-10-08T00:00:00.000Z');
+    expect(parseDateValue('2026-10-08T00:00:00.000Z')?.isValid()).toBe(true);
+    expect(parseDateValue(undefined)).toBeUndefined();
+  });
+});
+
 describe('PortalSelect helpers', () => {
   it('toList đọc nhiều dạng response', () => {
     expect(toList([1, 2])).toEqual([1, 2]);
@@ -73,13 +89,24 @@ describe('PortalSelect helpers', () => {
   it('hasRequiredParams chặn gọi API khi thiếu tham số bắt buộc', () => {
     expect(hasRequiredParams(undefined, undefined)).toBe(true);
     expect(hasRequiredParams({ pathVars: { id: undefined } }, { pathVars: ['id'] })).toBe(false);
-    expect(hasRequiredParams({ pathVars: { id: 3 }, params: { type: 'a' } }, { pathVars: ['id'], params: ['type'] })).toBe(true);
+    expect(
+      hasRequiredParams({ pathVars: { id: 3 }, params: { type: 'a' } }, { pathVars: ['id'], params: ['type'] }),
+    ).toBe(true);
   });
 });
 
 describe('PortalTreeSelect helpers', () => {
   const key = { label: 'name', value: 'id', children: { key: 'units', value: { label: 'name', value: 'id' } } };
-  const raw = [{ id: 'A', name: 'Khối A', units: [{ id: 'A1', name: 'Phòng A1' }, { id: 'A2', name: 'Phòng A2' }] }];
+  const raw = [
+    {
+      id: 'A',
+      name: 'Khối A',
+      units: [
+        { id: 'A1', name: 'Phòng A1' },
+        { id: 'A2', name: 'Phòng A2' },
+      ],
+    },
+  ];
 
   it('map dữ liệu thô sang cây', () => {
     expect(toTreeNodes(raw, key)).toEqual([
@@ -99,7 +126,9 @@ describe('PortalTreeSelect helpers', () => {
     const kept = pickSelectedBranches(tree, new Set(['A2']));
     const searchResult = [{ label: 'Khối B', value: 'B', children: [{ label: 'Phòng B1', value: 'B1' }] }];
 
-    expect(kept).toEqual([{ label: 'Khối A', value: 'A', children: [{ label: 'Phòng A2', value: 'A2', children: undefined }] }]);
+    expect(kept).toEqual([
+      { label: 'Khối A', value: 'A', children: [{ label: 'Phòng A2', value: 'A2', children: undefined }] },
+    ]);
     expect(mergeTrees(kept, searchResult).map(node => node.value)).toEqual(['A', 'B']);
   });
 });

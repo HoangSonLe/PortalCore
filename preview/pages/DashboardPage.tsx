@@ -18,7 +18,9 @@ const RefreshDemo = () => {
     await devApi.expireTokens();
 
     const started = performance.now();
-    const results = await Promise.allSettled(Array.from({ length: 5 }, (_, i) => userApi.list({ current: i + 1, pageSize: 5 })));
+    const results = await Promise.allSettled(
+      Array.from({ length: 5 }, (_, i) => userApi.list({ current: i + 1, pageSize: 5 })),
+    );
     const after = await devApi.stats();
     const ok = results.filter(r => r.status === 'fulfilled').length;
 
@@ -44,7 +46,8 @@ const RefreshDemo = () => {
       }
     >
       <Typography.Paragraph type="secondary">
-        Làm mọi access token hết hạn rồi gửi 5 request cùng lúc. Core chỉ refresh 1 lần và gửi lại mỗi request đúng 1 lần.
+        Làm mọi access token hết hạn rồi gửi 5 request cùng lúc. Core chỉ refresh 1 lần và gửi lại mỗi request đúng 1
+        lần.
       </Typography.Paragraph>
       {result && <Alert type="success" showIcon message={result} />}
     </Card>
@@ -70,7 +73,11 @@ const DashboardPage = () => {
         {stats.map(stat => (
           <Col key={stat.title} xs={12} lg={6}>
             <Card loading={loading}>
-              <Statistic title={stat.title} value={stat.value} prefix={<span style={{ color: stat.color }}>{stat.icon}</span>} />
+              <Statistic
+                title={stat.title}
+                value={stat.value}
+                prefix={<span style={{ color: stat.color }}>{stat.icon}</span>}
+              />
             </Card>
           </Col>
         ))}

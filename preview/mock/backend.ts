@@ -2,9 +2,10 @@
  * Backend giả chạy ngay trong trình duyệt (axios adapter) để chạy preview không cần server.
  * Mô phỏng đủ: login/refresh/logout, phân quyền, CRUD user có phân trang/lọc/sắp xếp.
  */
-import type { AxiosAdapter, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import type { MockRoute } from '@hoangsonle/portal-core';
+import type { InternalAxiosRequestConfig } from 'axios';
 
-import { AxiosError } from 'axios';
+import { createMockAdapter, MockError, mockFile } from '@hoangsonle/portal-core';
 
 export type Role = 'ADMIN' | 'EDITOR' | 'VIEWER';
 export type UserStatus = 'ACTIVE' | 'LOCKED' | 'PENDING';
@@ -35,17 +36,36 @@ const statuses: UserStatus[] = ['ACTIVE', 'ACTIVE', 'ACTIVE', 'LOCKED', 'PENDING
 const roles: Role[] = ['EDITOR', 'VIEWER', 'VIEWER'];
 
 const slug = (text: string) =>
-  text
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/đ/gi, 'd')
-    .toLowerCase()
-    .replace(/\s+/g, '.');
+  text.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/\s+/g, '.');
 
 let users: User[] = [
-  { id: 1, name: 'Quản trị viên', username: 'admin', email: 'admin@demo.local', role: 'ADMIN', status: 'ACTIVE', createdAt: '2026-01-02T08:00:00Z' },
-  { id: 2, name: 'Biên tập viên', username: 'editor', email: 'editor@demo.local', role: 'EDITOR', status: 'ACTIVE', createdAt: '2026-01-05T08:00:00Z' },
-  { id: 3, name: 'Người xem', username: 'viewer', email: 'viewer@demo.local', role: 'VIEWER', status: 'ACTIVE', createdAt: '2026-01-09T08:00:00Z' },
+  {
+    id: 1,
+    name: 'Quản trị viên',
+    username: 'admin',
+    email: 'admin@demo.local',
+    role: 'ADMIN',
+    status: 'ACTIVE',
+    createdAt: '2026-01-02T08:00:00Z',
+  },
+  {
+    id: 2,
+    name: 'Biên tập viên',
+    username: 'editor',
+    email: 'editor@demo.local',
+    role: 'EDITOR',
+    status: 'ACTIVE',
+    createdAt: '2026-01-05T08:00:00Z',
+  },
+  {
+    id: 3,
+    name: 'Người xem',
+    username: 'viewer',
+    email: 'viewer@demo.local',
+    role: 'VIEWER',
+    status: 'ACTIVE',
+    createdAt: '2026-01-09T08:00:00Z',
+  },
   ...Array.from({ length: 42 }, (_, i): User => {
     const name = `${lastNames[i % lastNames.length]} ${firstNames[(i * 5) % firstNames.length]}`;
     const username = `${slug(name)}${i + 4}`;
@@ -97,14 +117,6 @@ const devices = [
   { id: 'SW', name: 'Switch PoE', stock: 8 },
   { id: 'UPS', name: 'Bộ lưu điện', stock: 3 },
 ];
-
-/** Trả file: mockAdapter sẽ gửi Blob + header Content-Disposition. */
-class FileResult {
-  constructor(
-    readonly blob: Blob,
-    readonly filename: string,
-  ) {}
-}
 
 const avatarSvg = (name: string, hue: number) =>
   new Blob(
@@ -173,21 +185,12 @@ const issueTokens = (username: string) => {
   return { accessToken, refreshToken, expiresAt: Date.now() + ACCESS_TTL };
 };
 
-class HttpStatus extends Error {
-  constructor(
-    readonly status: number,
-    message: string,
-  ) {
-    super(message);
-  }
-}
-
 const requireAccount = (config: InternalAxiosRequestConfig) => {
   const header = String(config.headers?.Authorization ?? '');
   const token = header.replace(/^Bearer\s+/, '');
   const record = accessTokens.get(token);
 
-  if (!record || record.expiresAt < Date.now()) throw new HttpStatus(401, 'Phiên đăng nhập đã hết hạn');
+  if (!record || record.expiresAt < Date.now()) throw new MockError(401, 'Phiên đăng nhập đã hết hạn');
 
   return { username: record.username, ...accounts[record.username] };
 };
@@ -196,33 +199,31 @@ const requirePermission = (config: InternalAxiosRequestConfig, permission: strin
   const account = requireAccount(config);
 
   if (!account.permissions.includes('*') && !account.permissions.includes(permission)) {
-    throw new HttpStatus(403, 'Bạn không có quyền thực hiện thao tác này');
+    throw new MockError(403, 'Bạn không có quyền thực hiện thao tác này');
   }
 
   return account;
 };
 
 const validateUser = (input: Partial<User>, ignoreId?: number) => {
-  if (!input.name?.trim()) throw new HttpStatus(400, 'Họ tên không được để trống');
-  if (!input.email?.includes('@')) throw new HttpStatus(400, 'Email không hợp lệ');
-  if (users.some(u => u.email === input.email && u.id !== ignoreId)) throw new HttpStatus(400, 'Email đã tồn tại');
+  if (!input.name?.trim()) throw new MockError(400, 'Họ tên không được để trống');
+  if (!input.email?.includes('@')) throw new MockError(400, 'Email không hợp lệ');
+  if (users.some(u => u.email === input.email && u.id !== ignoreId)) throw new MockError(400, 'Email đã tồn tại');
   if (users.some(u => u.username === input.username && u.id !== ignoreId)) {
-    throw new HttpStatus(400, 'Tên đăng nhập đã tồn tại');
+    throw new MockError(400, 'Tên đăng nhập đã tồn tại');
   }
 };
 
 // ---- Routes ----
-type Ctx = { config: InternalAxiosRequestConfig; params: Record<string, any>; body: any; pathVars: Record<string, string> };
-type RouteHandler = (ctx: Ctx) => unknown;
 
-const routes: [string, string, RouteHandler][] = [
+const routes: MockRoute[] = [
   [
     'post',
     '/auth/login',
     ({ body }) => {
       const account = accounts[body?.username];
 
-      if (!account || account.password !== body?.password) throw new HttpStatus(401, 'Sai tên đăng nhập hoặc mật khẩu');
+      if (!account || account.password !== body?.password) throw new MockError(401, 'Sai tên đăng nhập hoặc mật khẩu');
 
       return issueTokens(body.username);
     },
@@ -234,7 +235,7 @@ const routes: [string, string, RouteHandler][] = [
       mockStats.refreshCalls += 1;
       const username = refreshTokens.get(body?.refreshToken);
 
-      if (!username) throw new HttpStatus(401, 'Refresh token không hợp lệ');
+      if (!username) throw new MockError(401, 'Refresh token không hợp lệ');
 
       refreshTokens.delete(body.refreshToken); // xoay vòng refresh token
 
@@ -250,7 +251,10 @@ const routes: [string, string, RouteHandler][] = [
       const account = requireAccount(config);
       const user = users.find(u => u.id === account.userId)!;
 
-      return { user: { id: user.id, name: user.name, username: user.username, email: user.email }, permissions: account.permissions };
+      return {
+        user: { id: user.id, name: user.name, username: user.username, email: user.email },
+        permissions: account.permissions,
+      };
     },
   ],
   [
@@ -262,14 +266,19 @@ const routes: [string, string, RouteHandler][] = [
       const count = (status?: UserStatus) => users.filter(u => !status || u.status === status).length;
       // Đường xu hướng 12 kỳ, điểm cuối = số hiện tại (giả lập, cố định theo seed).
       const trend = (end: number, seed: number) =>
-        Array.from({ length: 12 }, (_, i) => Math.max(0, Math.round(end * (0.55 + 0.45 * (i / 11)) + Math.sin(i * 1.7 + seed) * end * 0.08)));
+        Array.from({ length: 12 }, (_, i) =>
+          Math.max(0, Math.round(end * (0.55 + 0.45 * (i / 11)) + Math.sin(i * 1.7 + seed) * end * 0.08)),
+        );
 
       return {
         total: { value: count(), delta: 12.4, trend: trend(count(), 1) },
         active: { value: count('ACTIVE'), delta: 8.1, trend: trend(count('ACTIVE'), 2) },
         pending: { value: count('PENDING'), delta: -4.2, trend: trend(count('PENDING'), 3).reverse() },
         locked: { value: count('LOCKED'), delta: 2.0, trend: trend(count('LOCKED'), 4) },
-        roles: (['ADMIN', 'EDITOR', 'VIEWER'] as Role[]).map(role => ({ role, count: users.filter(u => u.role === role).length })),
+        roles: (['ADMIN', 'EDITOR', 'VIEWER'] as Role[]).map(role => ({
+          role,
+          count: users.filter(u => u.role === role).length,
+        })),
       };
     },
   ],
@@ -302,18 +311,24 @@ const routes: [string, string, RouteHandler][] = [
       });
     },
   ],
-  ['get', '/roles', () => [
-    { id: 'ADMIN', name: 'Quản trị' },
-    { id: 'EDITOR', name: 'Biên tập' },
-    { id: 'VIEWER', name: 'Chỉ xem' },
-  ]],
+  [
+    'get',
+    '/roles',
+    () => [
+      { id: 'ADMIN', name: 'Quản trị' },
+      { id: 'EDITOR', name: 'Biên tập' },
+      { id: 'VIEWER', name: 'Chỉ xem' },
+    ],
+  ],
   [
     'get',
     '/users',
     ({ config, params }) => {
       requirePermission(config, 'user.view');
       const { current = 1, pageSize = 10, keyword, status, role, sortField, sortOrder } = params;
-      const kw = String(keyword ?? '').trim().toLowerCase();
+      const kw = String(keyword ?? '')
+        .trim()
+        .toLowerCase();
       let list = users.filter(
         u =>
           (!kw || u.name.toLowerCase().includes(kw) || u.email.includes(kw) || u.username.includes(kw)) &&
@@ -324,7 +339,9 @@ const routes: [string, string, RouteHandler][] = [
       if (sortField) {
         const dir = sortOrder === 'descend' ? -1 : 1;
 
-        list = [...list].sort((a, b) => String(a[sortField as keyof User]).localeCompare(String(b[sortField as keyof User])) * dir);
+        list = [...list].sort(
+          (a, b) => String(a[sortField as keyof User]).localeCompare(String(b[sortField as keyof User])) * dir,
+        );
       }
 
       const start = (Number(current) - 1) * Number(pageSize);
@@ -349,7 +366,7 @@ const routes: [string, string, RouteHandler][] = [
       requirePermission(config, 'user.view');
       const user = users.find(u => u.id === Number(pathVars.id));
 
-      if (!user) throw new HttpStatus(404, 'Không tìm thấy người dùng');
+      if (!user) throw new MockError(404, 'Không tìm thấy người dùng');
 
       return user;
     },
@@ -360,7 +377,13 @@ const routes: [string, string, RouteHandler][] = [
     ({ config, body }) => {
       requirePermission(config, 'user.create');
       validateUser(body);
-      const user: User = { status: 'PENDING', role: 'VIEWER', ...body, id: nextId++, createdAt: new Date().toISOString() };
+      const user: User = {
+        status: 'PENDING',
+        role: 'VIEWER',
+        ...body,
+        id: nextId++,
+        createdAt: new Date().toISOString(),
+      };
 
       users = [user, ...users];
 
@@ -387,23 +410,27 @@ const routes: [string, string, RouteHandler][] = [
       requirePermission(config, 'user.delete');
       const id = Number(pathVars.id);
 
-      if (id <= 3) throw new HttpStatus(400, 'Không được xoá tài khoản demo');
+      if (id <= 3) throw new MockError(400, 'Không được xoá tài khoản demo');
 
       users = users.filter(u => u.id !== id);
 
       return { id };
     },
   ],
-  ['get', '/units', ({ config, params }) => {
-    requireAccount(config);
-    const kw = String(params.search ?? '').toLowerCase();
+  [
+    'get',
+    '/units',
+    ({ config, params }) => {
+      requireAccount(config);
+      const kw = String(params.search ?? '').toLowerCase();
 
-    if (!kw) return units;
+      if (!kw) return units;
 
-    return units
-      .map(unit => ({ ...unit, children: unit.children.filter(child => child.name.toLowerCase().includes(kw)) }))
-      .filter(unit => unit.children.length || unit.name.toLowerCase().includes(kw));
-  }],
+      return units
+        .map(unit => ({ ...unit, children: unit.children.filter(child => child.name.toLowerCase().includes(kw)) }))
+        .filter(unit => unit.children.length || unit.name.toLowerCase().includes(kw));
+    },
+  ],
   ['get', '/provinces', () => provinces.map(({ id, name }) => ({ id, name }))],
   [
     'get',
@@ -423,17 +450,25 @@ const routes: [string, string, RouteHandler][] = [
       const header = 'ID,Họ tên,Tài khoản,Email,Vai trò,Trạng thái';
       const lines = users.map(u => [u.id, u.name, u.username, u.email, u.role, u.status].join(','));
 
-      return new FileResult(new Blob(['\uFEFF' + [header, ...lines].join('\n')], { type: 'text/csv' }), 'danh-sach-nguoi-dung.csv');
+      return mockFile(
+        new Blob(['\uFEFF' + [header, ...lines].join('\n')], { type: 'text/csv' }),
+        'danh-sach-nguoi-dung.csv',
+      );
     },
   ],
   [
     'get',
     '/files/user-template',
     () =>
-      new FileResult(
-        new Blob(['\uFEFFHọ tên,Tài khoản,Email\nNguyễn Văn Mẫu,nguyen.van.mau,mau@demo.local\nTrần Thị Thử,tran.thi.thu,thu@demo.local\n'], {
-          type: 'text/csv',
-        }),
+      mockFile(
+        new Blob(
+          [
+            '\uFEFFHọ tên,Tài khoản,Email\nNguyễn Văn Mẫu,nguyen.van.mau,mau@demo.local\nTrần Thị Thử,tran.thi.thu,thu@demo.local\n',
+          ],
+          {
+            type: 'text/csv',
+          },
+        ),
         'mau-nhap-nguoi-dung.csv',
       ),
   ],
@@ -444,7 +479,7 @@ const routes: [string, string, RouteHandler][] = [
       requireAccount(config);
       const user = users.find(u => u.id === Number(pathVars.id)) ?? users[0];
 
-      return new FileResult(avatarSvg(user.name.split(' ').pop()!.charAt(0), (user.id * 47) % 360), `avatar-${user.id}.svg`);
+      return mockFile(avatarSvg(user.name.split(' ').pop()!.charAt(0), (user.id * 47) % 360), `avatar-${user.id}.svg`);
     },
   ],
   // Công cụ demo: làm mọi access token hết hạn ngay lập tức.
@@ -452,67 +487,13 @@ const routes: [string, string, RouteHandler][] = [
   ['get', '/dev/stats', () => ({ ...mockStats })],
 ];
 
-const matchRoute = (method: string, url: string) => {
-  for (const [routeMethod, pattern, handler] of routes) {
-    if (routeMethod !== method) continue;
+export const mockAdapter = createMockAdapter({
+  routes,
+  delay: [200, 500],
+  onRequest: ({ method, url }) => {
+    mockStats.requests += 1;
 
-    const names: string[] = [];
-    const regex = new RegExp(
-      `^${pattern.replace(/:(\w+)/g, (_, name: string) => {
-        names.push(name);
-
-        return '([^/]+)';
-      })}$`,
-    );
-    const match = url.match(regex);
-
-    if (match) {
-      return { handler, pathVars: Object.fromEntries(names.map((name, i) => [name, decodeURIComponent(match[i + 1])])) };
-    }
-  }
-
-  return undefined;
-};
-
-export const mockAdapter: AxiosAdapter = async config => {
-  await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300));
-  mockStats.requests += 1;
-
-  const method = (config.method ?? 'get').toLowerCase();
-  const url = (config.url ?? '').split('?')[0];
-
-  if (method === 'get' && url === '/users') mockStats.userListRequests += 1;
-  const body = typeof config.data === 'string' && config.data ? JSON.parse(config.data) : config.data;
-  const respond = (status: number, data: unknown, headers: Record<string, string> = {}): AxiosResponse => ({
-    data,
-    status,
-    statusText: String(status),
-    headers,
-    config,
-    request: {},
-  });
-
-  const route = matchRoute(method, url);
-
-  try {
-    if (!route) throw new HttpStatus(404, `Mock API không có ${method.toUpperCase()} ${url}`);
-
-    const data = route.handler({ config, params: config.params ?? {}, body, pathVars: route.pathVars }) ?? null;
-
-    saveDb();
-
-    if (data instanceof FileResult) {
-      return respond(200, data.blob, {
-        'content-type': data.blob.type,
-        'content-disposition': `attachment; filename*=UTF-8''${encodeURIComponent(data.filename)}`,
-      });
-    }
-
-    return respond(200, data);
-  } catch (error) {
-    const status = error instanceof HttpStatus ? error.status : 500;
-    const response = respond(status, { message: error instanceof Error ? error.message : 'Lỗi mock server' });
-
-    throw new AxiosError(`Request failed with status code ${status}`, 'ERR_BAD_RESPONSE', config, {}, response);
-  }
-};
+    if (method === 'get' && url === '/users') mockStats.userListRequests += 1;
+  },
+  onResponse: () => saveDb(),
+});

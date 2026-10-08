@@ -1,83 +1,34 @@
 import type { UserInput } from '../api';
 import type { User } from '../mock/backend';
-import type { ActionType, ProColumns } from '@ant-design/pro-components';
+import type { ProColumns } from '@ant-design/pro-components';
 
-import { ModalForm, ProFormRadio, ProFormSelect, ProFormText } from '@ant-design/pro-components';
+import { ProFormRadio, ProFormSelect, ProFormText } from '@ant-design/pro-components';
 import {
   MoreButtonGroup,
   PageContainer,
   PortalButton,
   PortalDownloadButton,
   PortalInput,
+  PortalModalForm,
   PortalSelect,
   PortalTable,
   StatusTag,
-  useDisclosure,
+  useCrudPage,
   useT,
 } from '@hoangsonle/portal-core';
 import { App, Typography } from 'antd';
 import dayjs from 'dayjs';
-import { useRef } from 'react';
 import { Link, useNavigate } from 'react-router';
 
 import { roleApi, userApi } from '../api';
 import { userRole, userStatus } from '../mappings';
 
-const UserFormModal = ({
-  open,
-  user,
-  onClose,
-  onSaved,
-}: {
-  open: boolean;
-  user?: User;
-  onClose: () => void;
-  onSaved: () => void;
-}) => {
-  const t = useT();
-
-  return (
-    <ModalForm<UserInput>
-      key={user?.id ?? 'new'}
-      title={user ? `Sửa: ${user.name}` : 'Thêm người dùng'}
-      open={open}
-      width={520}
-      initialValues={user ?? { role: 'VIEWER', status: 'PENDING' }}
-      modalProps={{ destroyOnHidden: true, onCancel: onClose }}
-      onFinish={async values => {
-        try {
-          if (user) await userApi.update(user.id, values);
-          else await userApi.create(values);
-        } catch {
-          return false; // giữ modal mở, lỗi đã được toast
-        }
-
-        onSaved();
-        onClose();
-
-        return true;
-      }}
-    >
-      <ProFormText name="name" label="Họ tên" rules={[{ required: true }]} />
-      <ProFormText name="username" label="Tên đăng nhập" rules={[{ required: true }]} disabled={!!user} />
-      <ProFormText name="email" label="Email" rules={[{ required: true, type: 'email' }]} />
-      <ProFormSelect
-        name="role"
-        label="Vai trò"
-        request={async () => (await roleApi.list()).map(role => ({ label: role.name, value: role.id }))}
-        rules={[{ required: true }]}
-      />
-      <ProFormRadio.Group name="status" label="Trạng thái" radioType="button" options={userStatus.toOptions(t)} />
-    </ModalForm>
-  );
-};
-
 const UserListPage = () => {
   const t = useT();
   const navigate = useNavigate();
   const { message } = App.useApp();
-  const actionRef = useRef<ActionType>(undefined);
-  const editor = useDisclosure<User>();
+  // Bảng + modal thêm/sửa + xoá + tải lại: gom hết vào 1 hook.
+  const crud = useCrudPage<User>({ remove: user => userApi.remove(user.id) });
 
   const columns: ProColumns<User>[] = [
     {
@@ -123,12 +74,12 @@ const UserListPage = () => {
               { children: 'Đồng bộ', onClick: () => message.info('Đồng bộ (tự làm)') },
             ]}
           />
-          <PortalButton type="primary" actionType="add" permissionCode="user.create" onClick={() => editor.show()} />
+          <PortalButton type="primary" actionType="add" permissionCode="user.create" onClick={crud.openCreate} />
         </>
       }
     >
       <PortalTable<User>
-        actionRef={actionRef}
+        actionRef={crud.actionRef}
         columns={columns}
         request={userApi.list}
         pagination={{ defaultPageSize: 10 }}
@@ -153,20 +104,39 @@ const UserListPage = () => {
         actionColumn={{
           renderButtons: record => [
             { actionType: 'view', onClick: () => navigate(`/system/users/${record.id}`) },
-            { actionType: 'edit', permissionCode: 'user.update', onClick: () => editor.show(record) },
+            { actionType: 'edit', permissionCode: 'user.update', onClick: () => crud.openEdit(record) },
             {
               actionType: 'delete',
               permissionCode: 'user.delete',
               popConfirm: { title: 'Xoá người dùng này?' },
-              onClick: async () => {
-                await userApi.remove(record.id);
-                actionRef.current?.reload();
-              },
+              onClick: () => crud.removeRecord(record),
             },
           ],
         }}
       />
-      <UserFormModal open={editor.open} user={editor.data} onClose={editor.hide} onSaved={() => actionRef.current?.reload()} />
+      <PortalModalForm<User, UserInput>
+        {...crud.formProps}
+        title={{ create: 'Thêm người dùng', edit: user => `Sửa: ${user.name}` }}
+        initialValues={{ role: 'VIEWER', status: 'PENDING' }}
+        create={userApi.create}
+        update={(user, values) => userApi.update(user.id, values)}
+      >
+        <ProFormText name="name" label="Họ tên" rules={[{ required: true }]} />
+        <ProFormText
+          name="username"
+          label="Tên đăng nhập"
+          rules={[{ required: true }]}
+          disabled={!!crud.formProps.record}
+        />
+        <ProFormText name="email" label="Email" rules={[{ required: true, type: 'email' }]} />
+        <ProFormSelect
+          name="role"
+          label="Vai trò"
+          request={async () => (await roleApi.list()).map(role => ({ label: role.name, value: role.id }))}
+          rules={[{ required: true }]}
+        />
+        <ProFormRadio.Group name="status" label="Trạng thái" radioType="button" options={userStatus.toOptions(t)} />
+      </PortalModalForm>
     </PageContainer>
   );
 };

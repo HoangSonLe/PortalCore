@@ -21,7 +21,13 @@ export interface PortalBlobImageProps extends Omit<ImageProps, 'src'> {
 }
 
 /** Hiện ảnh từ server file có bảo mật (giống PortalBlobImage bên Kit cũ, thêm gắn token + giải phóng bộ nhớ). */
-export const PortalBlobImage = ({ imageUrl, noImageUrl = NO_IMAGE, withAuth = true, preview, ...props }: PortalBlobImageProps) => {
+export const PortalBlobImage = ({
+  imageUrl,
+  noImageUrl = NO_IMAGE,
+  withAuth = true,
+  preview,
+  ...props
+}: PortalBlobImageProps) => {
   const http = useHttp();
   const [blobUrl, setBlobUrl] = useState<string>();
 

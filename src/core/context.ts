@@ -5,7 +5,7 @@ import type { Locale, Translate } from '../i18n/messages';
 import type { AppRoute } from '../router/types';
 import type { AppStore } from '../stores/appStore';
 import type { AuthStore } from '../stores/authStore';
-import type { ReactNode } from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
 
 import { createContext, useContext } from 'react';
 
@@ -57,6 +57,9 @@ export interface PortalContextValue {
   layout: LayoutOptions;
   pages: PageOverrides;
   basePath: string;
+  /** Namespace storage của app (`portal:<app.code>` hoặc `storageKey` tự đặt). */
+  storageKey: string;
+  onError?: (error: Error, info: ErrorInfo) => void;
 }
 
 export const PortalContext = createContext<PortalContextValue | null>(null);

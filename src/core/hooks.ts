@@ -52,5 +52,11 @@ export const useAuth = () => {
 export const useAppSettings = () => {
   const { appStore, locales } = usePortal();
 
-  return { ...useStore(appStore, useShallow(s => s)), locales };
+  return {
+    ...useStore(
+      appStore,
+      useShallow(s => s),
+    ),
+    locales,
+  };
 };

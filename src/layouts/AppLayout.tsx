@@ -8,6 +8,7 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router';
 
 import { usePortal } from '../core/context';
+import { ErrorBoundary } from '../core/ErrorBoundary';
 import { useAppSettings, useT } from '../core/hooks';
 import { useCurrentRoute, useVisibleRoutes } from '../router/useVisibleRoutes';
 import { joinPath } from '../utils/url';
@@ -54,7 +55,14 @@ const SiderBrand = ({ collapsed }: { collapsed: boolean }) => {
       {app.logo}
       {!collapsed && (
         <span
-          style={{ color: '#fff', fontWeight: 600, fontSize: 16, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+          style={{
+            color: '#fff',
+            fontWeight: 600,
+            fontSize: 16,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
         >
           {app.name}
         </span>
@@ -67,7 +75,7 @@ export const AppLayout = () => {
   const t = useT();
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { app, layout } = usePortal();
+  const { app, layout, onError } = usePortal();
   const { siderCollapsed, setSiderCollapsed } = useAppSettings();
   const { token } = theme.useToken();
   const screens = Grid.useBreakpoint();
@@ -181,18 +189,22 @@ export const AppLayout = () => {
           </Flex>
         </Layout.Header>
         <Layout.Content style={{ padding: isMobile ? 16 : 24 }}>
-          <Suspense
-            fallback={
-              <Flex align="center" justify="center" style={{ minHeight: 240 }}>
-                <Spin />
-              </Flex>
-            }
-          >
-            <Outlet />
-          </Suspense>
+          <ErrorBoundary key={pathname} onError={onError}>
+            <Suspense
+              fallback={
+                <Flex align="center" justify="center" style={{ minHeight: 240 }}>
+                  <Spin />
+                </Flex>
+              }
+            >
+              <Outlet />
+            </Suspense>
+          </ErrorBoundary>
         </Layout.Content>
         {layout.footer && (
-          <Layout.Footer style={{ textAlign: 'center', color: token.colorTextSecondary }}>{layout.footer}</Layout.Footer>
+          <Layout.Footer style={{ textAlign: 'center', color: token.colorTextSecondary }}>
+            {layout.footer}
+          </Layout.Footer>
         )}
       </Layout>
     </Layout>

@@ -8,8 +8,10 @@ export interface NotifyOptions {
   error?: boolean | string;
 }
 
-export interface RequestOptions<TBody = unknown, TQuery = Record<string, unknown>>
-  extends Omit<AxiosRequestConfig, 'url' | 'data' | 'params' | 'method'> {
+export interface RequestOptions<TBody = unknown, TQuery = Record<string, unknown>> extends Omit<
+  AxiosRequestConfig,
+  'url' | 'data' | 'params' | 'method'
+> {
   /** Thay `:name` trong url. */
   pathVars?: PathVars;
   /** Query string. */
@@ -74,7 +76,11 @@ export interface HttpClient {
   ) => Promise<TResponse>;
   delete: <TResponse = unknown>(url: string, options?: RequestOptions) => Promise<TResponse>;
   /** Trả về nguyên AxiosResponse (cần header, status, blob...). */
-  raw: <TResponse = unknown>(method: HttpMethod, url: string, options?: RequestOptions) => Promise<AxiosResponse<TResponse>>;
+  raw: <TResponse = unknown>(
+    method: HttpMethod,
+    url: string,
+    options?: RequestOptions,
+  ) => Promise<AxiosResponse<TResponse>>;
   setAuthHandlers: (handlers: AuthHandlers | undefined) => void;
   setNotifier: (notifier: Notifier | undefined) => void;
 }

@@ -140,8 +140,8 @@ const FormTab = () => {
             </Form.Item>
           </Col>
           <Col xs={24} md={12} xl={8}>
-            <Form.Item name="birthday" label="PortalDatePicker (trả chuỗi ISO)">
-              <PortalDatePicker readOnly={readOnly} />
+            <Form.Item name="birthday" label="PortalDatePicker — valueFormat YYYY-MM-DD">
+              <PortalDatePicker readOnly={readOnly} valueFormat="YYYY-MM-DD" />
             </Form.Item>
           </Col>
           <Col xs={24} md={12} xl={8}>
@@ -168,7 +168,15 @@ const FormTab = () => {
           </Col>
           <Col xs={24} md={12} xl={8}>
             <Form.Item name="roles" label="PortalSelect — nhiều lựa chọn, lọc tại chỗ">
-              <PortalSelect readOnly={readOnly} mode="multiple" request={roleApi.list} labelKey="name" valueKey="id" searchMode="local" maxTagCount={1} />
+              <PortalSelect
+                readOnly={readOnly}
+                mode="multiple"
+                request={roleApi.list}
+                labelKey="name"
+                valueKey="id"
+                searchMode="local"
+                maxTagCount={1}
+              />
             </Form.Item>
           </Col>
           <Col xs={24} md={12} xl={8}>
@@ -202,7 +210,11 @@ const FormTab = () => {
               <PortalTreeSelect<Unit>
                 readOnly={readOnly}
                 request={catalogApi.units}
-                treeSelectKey={{ label: 'name', value: 'id', children: { key: 'children', value: { label: 'name', value: 'id' } } }}
+                treeSelectKey={{
+                  label: 'name',
+                  value: 'id',
+                  children: { key: 'children', value: { label: 'name', value: 'id' } },
+                }}
                 placeholder="Chọn đơn vị"
               />
             </Form.Item>
@@ -226,16 +238,27 @@ const FileTab = () => {
   return (
     <Row gutter={[16, 16]}>
       <Section title="PortalUploadAvatar">
-        <PortalUploadAvatar value={avatar} onChange={setAvatar} upload={file => wait().then(() => readAsDataURL(file))} />
+        <PortalUploadAvatar
+          value={avatar}
+          onChange={setAvatar}
+          upload={file => wait().then(() => readAsDataURL(file))}
+        />
         <Typography.Text type="secondary">
           Truyền hàm <Typography.Text code>upload(file) =&gt; Promise&lt;url&gt;</Typography.Text>. Muốn cắt ảnh: cài{' '}
-          <Typography.Text code>antd-img-crop</Typography.Text> rồi truyền <Typography.Text code>imgCrop={'{ImgCrop}'}</Typography.Text>.
+          <Typography.Text code>antd-img-crop</Typography.Text> rồi truyền{' '}
+          <Typography.Text code>imgCrop={'{ImgCrop}'}</Typography.Text>.
         </Typography.Text>
       </Section>
       <Section title="PortalBlobImage — ảnh cần token">
         <Space wrap>
           {[1, 2, 5, 9].map(id => (
-            <PortalBlobImage key={id} imageUrl={`/files/avatar/${id}`} width={120} height={80} style={{ objectFit: 'cover', borderRadius: 6 }} />
+            <PortalBlobImage
+              key={id}
+              imageUrl={`/files/avatar/${id}`}
+              width={120}
+              height={80}
+              style={{ objectFit: 'cover', borderRadius: 6 }}
+            />
           ))}
         </Space>
         <Typography.Text type="secondary">Tải qua HttpClient nên tự gắn token; bấm để xem lớn.</Typography.Text>
@@ -330,7 +353,10 @@ const OtherTab = () => {
         </Space>
       </Section>
       <Section title="Can / usePermission / useDisclosure">
-        <Can permission="setting.manage" fallback={<Typography.Text type="warning">Bạn không có quyền setting.manage</Typography.Text>}>
+        <Can
+          permission="setting.manage"
+          fallback={<Typography.Text type="warning">Bạn không có quyền setting.manage</Typography.Text>}
+        >
           <Typography.Text type="success">Bạn có quyền setting.manage</Typography.Text>
         </Can>
         <Typography.Text>

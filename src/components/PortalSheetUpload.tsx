@@ -11,12 +11,11 @@ import { PortalDownloadButton } from './PortalDownloadButton';
 import { PortalTable } from './PortalTable';
 
 /** Phần tối thiểu của thư viện SheetJS mà component cần (`import * as XLSX from 'xlsx'`). */
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 export interface XlsxModule {
   read: (data: any, options: any) => { SheetNames: string[]; Sheets: Record<string, any> };
   utils: { sheet_to_json: (sheet: any, options?: any) => any[] };
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 export interface SheetColumnField {
   /** Tên cột đọc từ sheet (theo thứ tự cột A, B, C...). */
@@ -70,7 +69,9 @@ export const PortalSheetUpload = ({
       source
         .filter(row => keys.includes(row.__row))
         .map(row =>
-          Object.fromEntries(columnFieldItems.filter(field => field.name).map(field => [field.name!, row[field.dataIndex]])),
+          Object.fromEntries(
+            columnFieldItems.filter(field => field.name).map(field => [field.name!, row[field.dataIndex]]),
+          ),
         ),
     );
   };
@@ -81,11 +82,13 @@ export const PortalSheetUpload = ({
     try {
       const workbook = xlsx.read(await file.arrayBuffer(), { type: 'array' });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const data = (xlsx.utils.sheet_to_json(sheet, {
+      const data = (
+        xlsx.utils.sheet_to_json(sheet, {
           header: columnFieldItems.map(field => field.dataIndex),
           range: headerRows,
           defval: '',
-        }) as Record<string, unknown>[]).map((row, index) => ({ ...row, __row: index + 1 }));
+        }) as Record<string, unknown>[]
+      ).map((row, index) => ({ ...row, __row: index + 1 }));
 
       setRows(data);
       emit(
@@ -108,7 +111,13 @@ export const PortalSheetUpload = ({
   if (rows.length === 0) {
     return (
       <div className={containerClassName}>
-        <Upload.Dragger accept={ACCEPT} multiple={false} showUploadList={false} beforeUpload={readFile} disabled={reading}>
+        <Upload.Dragger
+          accept={ACCEPT}
+          multiple={false}
+          showUploadList={false}
+          beforeUpload={readFile}
+          disabled={reading}
+        >
           <p className="ant-upload-drag-icon">
             <InboxOutlined />
           </p>
@@ -141,7 +150,11 @@ export const PortalSheetUpload = ({
         pagination={false}
         tableAlertRender={false}
         columnEmptyText=""
-        headerTitle={<Typography.Text type="secondary">{t('sheet.selected', { count: selectedKeys.length, total: rows.length })}</Typography.Text>}
+        headerTitle={
+          <Typography.Text type="secondary">
+            {t('sheet.selected', { count: selectedKeys.length, total: rows.length })}
+          </Typography.Text>
+        }
         rowSelection={{ selectedRowKeys: selectedKeys, onChange: keys => emit(keys as number[]) }}
         toolBarRender={() => [
           <Flex key="actions" gap={8}>
