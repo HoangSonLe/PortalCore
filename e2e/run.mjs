@@ -214,6 +214,10 @@ check(
 await page.screenshot({ path: OUT + '12-components-transfer.png', fullPage: true });
 await page.goto(`${BASE}/dashboard`);
 
+// 9. Logout (kèm tab thứ 2 để kiểm tra đồng bộ giữa các tab)
+const secondTab = await context.newPage();
+await secondTab.goto(`${BASE}/system/users`);
+await secondTab.locator('.ant-table-row').first().waitFor();
 // 9. Logout -> viewer: menu ẩn Cài đặt, không có nút Thêm/Sửa/Xoá, URL trực tiếp -> 403
 await page
   .locator('.ant-layout-header')
@@ -222,6 +226,9 @@ await page
 await page.getByRole('menuitem', { name: /Đăng xuất/ }).click();
 await page.waitForURL(/\/auth\/login/);
 check('Đăng xuất -> về trang login', true);
+await secondTab.waitForURL(/\/auth\/login/, { timeout: 8000 });
+check('Đăng xuất ở tab này -> tab khác cũng tự về trang login', true, secondTab.url().replace(BASE, ''));
+await secondTab.close();
 await login('viewer');
 await page.waitForURL(/\/dashboard$/);
 await page.getByRole('menuitem', { name: /Hệ thống/ }).click();

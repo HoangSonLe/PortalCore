@@ -1,4 +1,4 @@
-import type { AuthAdapter } from '../auth/types';
+import type { AuthAdapter, AuthTokens } from '../auth/types';
 import type { HttpClient } from '../http/types';
 import type { Locale, Messages } from '../i18n/messages';
 import type { AppRoute } from '../router/types';
@@ -148,12 +148,25 @@ export const PortalProvider = ({
   useEffect(() => {
     const onStorage = (event: StorageEvent) => {
       if (event.key === `${core.storageKey}:auth`) {
-        void Promise.resolve(core.authStore.persist.rehydrate()).then(() => {
-          const { tokens, status } = core.authStore.getState();
+        // Đọc thẳng giá trị mới: token `undefined` bị JSON.stringify bỏ đi, nên `persist.rehydrate()`
+        // sẽ gộp `{}` vào state cũ và giữ nguyên token đã đăng xuất.
+        let tokens: AuthTokens | undefined;
 
-          if (!tokens?.accessToken) core.authStore.getState().clear();
-          else if (status === 'anonymous') core.authStore.setState({ status: 'checking' });
-        });
+        try {
+          tokens = event.newValue ? (JSON.parse(event.newValue)?.state?.tokens as AuthTokens | undefined) : undefined;
+        } catch {
+          tokens = undefined;
+        }
+
+        const state = core.authStore.getState();
+
+        if (!tokens?.accessToken) {
+          if (state.tokens) state.clear();
+        } else if (tokens.accessToken !== state.tokens?.accessToken) {
+          state.setTokens(tokens);
+          // Tab này chưa đăng nhập -> tải user + quyền như lúc mở app.
+          if (state.status === 'anonymous') core.authStore.setState({ status: 'checking' });
+        }
       } else if (event.key === `${core.storageKey}:app`) {
         void core.appStore.persist.rehydrate();
       }

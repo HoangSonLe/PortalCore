@@ -15,7 +15,7 @@ import { routes } from './routes';
 const app = {
   code: 'preview',
   name: 'Portal Core',
-  version: '0.2.0',
+  version: '0.3.0',
   logo: <AppstoreFilled style={{ fontSize: 24, color: '#1ab394' }} />,
 };
 

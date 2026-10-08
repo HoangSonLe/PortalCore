@@ -6,7 +6,7 @@ Core FE dùng chung cho các web quản trị / portal cá nhân: **provider g�
 |---|---|
 | Stack | React 19 · antd 5.29 · ProComponents 2.8 · react-router 7 · zustand 5 · axios · TypeScript 5.9 · Vite 7 |
 | Kích thước | ~120 kB JS (chưa minify), không bundle antd/react — app dùng chung bản của mình |
-| Kiểm thử | 34 unit test (Vitest) + 32 kịch bản e2e trên Chrome thật (xem [Kiểm thử](#9-kiểm-thử)) |
+| Kiểm thử | 55 unit/component test + smoke test cài từ tarball + 32 kịch bản e2e trên Chrome thật; CI GitHub Actions (xem [Kiểm thử](#9-kiểm-thử)) |
 
 Mục lục: [1. Chạy thử preview](#1-chạy-thử-preview-5-phút) · [2. Cấu trúc](#2-cấu-trúc-thư-mục) · [3. Dùng trong dự án](#3-dùng-trong-dự-án-mới) · [4. Auth adapter](#4-auth-adapter--nối-với-backend) · [5. Route & phân quyền](#5-route--phân-quyền) · [6. Component](#6-component--hook) · [7. i18n, theme, env](#7-i18n-theme-runtime-env) · [8. Build & phát hành](#8-build--phát-hành) · [9. Kiểm thử](#9-kiểm-thử) · [10. Review thiết kế](#10-review-thiết-kế--so-với-các-core-công-ty) · [11. Giới hạn & roadmap](#11-giới-hạn-hiện-tại--roadmap)
 
@@ -58,24 +58,39 @@ src/
   permission/   hasPermission, <Can>, withPermission
   components/   Các component Portal* cùng tên + API với Kit cũ (bảng, nút, input, select, ngày, upload, Excel, transfer...), StatusTag + createMapping, PageContainer
   theme/        themes.ts: lightTheme (kiểu ANVL) + darkTheme (kiểu C10) — ThemeConfig antd thuần
-  hooks/        useRequest, useDisclosure
+  hooks/        useRequest, useDisclosure, useCrudPage
+  dev/          createMockAdapter (backend giả trong trình duyệt)
   i18n/ theme/ env/ utils/
 preview/        App demo + mock backend (mock/backend.ts) — cũng là ví dụ cách dùng chuẩn
-tests/          Unit test
+template/       Khung dự án mới (npm run create-app): Vite + Dockerfile + nginx + env.sh
+scripts/        create-app.mjs, smoke-consumer.mjs
+tests/          Unit + component test (Vitest + Testing Library)
+e2e/            Kịch bản Playwright chạy trên preview
+.github/        CI: lint, format, typecheck, test, build, smoke, e2e
 ```
 
 ## 3. Dùng trong dự án mới
 
-### 3.1 Cài
-
-Chưa publish npm thì dùng 1 trong 2 cách:
+### 3.1 Cách nhanh nhất: tạo từ template
 
 ```bash
-# Cách 1 — link local (sửa core thấy ngay, nhớ `npm run build` trong core)
-npm install ../PortalCore
+cd D:\repos\Private\PortalCore
+npm run create-app -- ../MyApp --title "Quản lý kho"
+cd ../MyApp && npm install && cp .env.example .env.local && npm run dev   # admin / admin
+```
 
-# Cách 2 — từ GitHub (sau khi push repo)
-npm install github:HoangSonLe/PortalCore#v0.1.0
+Dự án mới có sẵn: `main.tsx`, routes, tầng API, backend giả (`src/api/mock.ts`), một trang CRUD mẫu dùng `useCrudPage`, Dockerfile + nginx + script sinh `env.js` lúc container khởi động. Core được đóng gói bằng `npm pack` và cài từ `vendor/*.tgz` (không symlink nên không bị trùng React). Muốn cài từ GitHub: `--core github:HoangSonLe/PortalCore#v0.3.0`.
+
+### 3.1b Cài thủ công vào dự án có sẵn
+
+```bash
+# Từ tarball (khuyên dùng khi chưa publish): trong repo core
+npm run build && npm pack          # -> hoangsonle-portal-core-x.y.z.tgz
+# trong dự án
+npm install ../PortalCore/hoangsonle-portal-core-x.y.z.tgz
+
+# Hoặc từ GitHub (sau khi push repo)
+npm install github:HoangSonLe/PortalCore#v0.3.0
 ```
 
 Cài peer dependency (dùng chung bản với app):
@@ -264,7 +279,42 @@ Các component bảng/nút có **cùng tên và cùng API với PortalKit cũ** 
 />
 ```
 
-Mặc định có cột **STT** đánh số liên tục qua các trang (`indexColumn={false}` để tắt), nút Làm mới / Tìm kiếm, toolbar reload + cài đặt cột + toàn màn hình. Lỗi API → bảng rỗng thay vì treo loading.
+Mặc định có cột **STT** đánh số liên tục qua các trang (`indexColumn={false}` để tắt), nút Làm mới / Tìm kiếm, toolbar reload + cài đặt cột + toàn màn hình. **Cài đặt cột (ẩn/hiện, thứ tự, ghim) được nhớ theo từng trang** (`persistColumns`, truyền string khi 1 trang có nhiều bảng, `false` để tắt). Lỗi API → bảng rỗng thay vì treo loading.
+
+**`useCrudPage` + `PortalModalForm`** — gom phần lặp lại của trang danh mục (bảng, modal thêm/sửa, xoá, tải lại):
+
+```tsx
+const crud = useCrudPage<User>({ remove: user => userApi.remove(user.id) });
+
+<PortalButton type="primary" actionType="add" onClick={crud.openCreate} />
+<PortalTable actionRef={crud.actionRef} request={userApi.list} columns={columns}
+  actionColumn={{ renderButtons: user => [
+    { actionType: 'edit', onClick: () => crud.openEdit(user) },
+    { actionType: 'delete', popConfirm: { title: 'Xoá?' }, onClick: () => crud.removeRecord(user) },
+  ] }} />
+<PortalModalForm<User, UserInput> {...crud.formProps}
+  title={{ create: 'Thêm người dùng', edit: u => `Sửa: ${u.name}` }}
+  create={userApi.create} update={(u, values) => userApi.update(u.id, values)}>
+  <ProFormText name="name" label="Họ tên" rules={[{ required: true }]} />
+</PortalModalForm>
+```
+
+Lỗi API khi lưu → modal giữ nguyên (lỗi đã được toast); lưu xong → đóng modal + tải lại bảng. Xem trang mẫu hoàn chỉnh ở `template/src/pages/CategoryListPage.tsx`.
+
+**`createMockAdapter`** — backend giả chạy trong trình duyệt, để làm UI trước khi có API:
+
+```ts
+const http = createHttpClient({
+  adapter: env.USE_MOCK === 'true' ? createMockAdapter({ routes: [
+    ['post', '/auth/login', ({ body }) => ({ accessToken: 'x' })],
+    ['get', '/users/:id', ({ pathVars, token }) => findUser(pathVars.id)],
+    ['delete', '/users/:id', () => { throw new MockError(403, 'Không có quyền'); }],
+    ['get', '/reports/users', () => mockFile(blob, 'nguoi-dung.xlsx')],
+  ] }) : undefined,
+});
+```
+
+**`ErrorBoundary`** — đã bọc sẵn quanh nội dung trang (reset khi đổi URL) và quanh toàn app: trang lỗi hiện thông báo + nút Thử lại / Tải lại thay vì trắng màn hình. Lỗi tải file JS sau khi deploy bản mới → tự tải lại trang 1 lần. Gửi lỗi đi đâu đó: `<PortalProvider onError={(error, info) => Sentry.captureException(error)} />`.
 
 **`PortalButton`** — 45 `actionType` có sẵn nhãn + icon, cùng danh sách và cùng chữ với Kit cũ (`add` → "Thêm mới", `view` → "Xem chi tiết", `approve` → "Phê duyệt", `transfer-process` → "Chuyển xử lý"...). Xem đủ ở [PortalButton.tsx](src/components/PortalButton.tsx) hoặc tab Nút của preview.
 
@@ -301,7 +351,7 @@ Viết lại, giữ tên + prop như Kit; đã sửa vài lỗi của bản cũ 
 | `PortalInput` | `textType` (viết hoa, capitalize...), `regexRule`, `readOnly` | `regexRule` giờ **có tác dụng** (Kit khai báo nhưng không dùng); `onChange` báo ngay, `debounceTime` tuỳ chọn và tự báo khi blur (Kit trễ 500ms → bấm Lưu nhanh mất ký tự) |
 | `PortalInputTextArea` | Textarea có `readOnly` | Như trên |
 | `PortalNumberInput` | Số có phân cách hàng nghìn, `inputType="currency"` (VNĐ, bước 1.000) | Không nhóm nhầm phần thập phân; đổi được `separator` |
-| `PortalDatePicker` / `PortalRangePicker` | Nhận/trả **chuỗi ISO**, định dạng kiểu VN, chọn nhanh Hôm nay / Tuần này / Tháng này / 7 ngày / 30 ngày | Mốc chọn nhanh tính lúc mở (Kit tính 1 lần lúc tải trang → qua nửa đêm sai ngày) |
+| `PortalDatePicker` / `PortalRangePicker` | Nhận/trả chuỗi, định dạng kiểu VN, chọn nhanh Hôm nay / Tuần này / Tháng này / 7 ngày / 30 ngày | Mốc chọn nhanh tính lúc mở (Kit tính 1 lần lúc tải trang → qua nửa đêm sai ngày). **`valueFormat`**: mặc định `'iso'` như Kit; ô chỉ có ngày (ngày sinh, ngày hiệu lực) nên dùng `valueFormat="YYYY-MM-DD"` để không bị lệch ngày do múi giờ (ISO của 08/10 lúc 0h giờ VN là `2026-10-07T17:00:00Z`) |
 | `PortalDownloadButton` | Tải file: `url`, `filename`, `buttonProps` | Đi qua HttpClient nên **gắn token + tự refresh**; tự đọc tên file từ `Content-Disposition` |
 | `PortalUpload` | Upload nhiều ảnh dạng thẻ, bấm xem lớn | Dùng được dạng controlled (`fileList`) |
 | `PortalUploadAvatar` | Chọn ảnh → (cắt) → upload → trả URL | Truyền `upload(file) => Promise<url>`; cắt ảnh: `imgCrop={ImgCrop}` (core không phụ thuộc `antd-img-crop`) |
@@ -366,17 +416,31 @@ Trong app: `readRuntimeEnv({ API_URL: import.meta.env.VITE_API_URL })` — giá 
 ## 8. Build & phát hành
 
 ```bash
+npm run lint          # ESLint 9 (typescript-eslint + rules-of-hooks/exhaustive-deps)
+npm run format        # Prettier ghi đè; format:check để kiểm tra
 npm run typecheck     # tsc toàn bộ (src + preview + tests)
-npm test              # unit test
+npm test              # unit + component test
 npm run build         # -> dist/ (ESM, giữ cấu trúc module để tree-shake, kèm .d.ts + sourcemap)
-npm run build:preview # build app demo -> preview-dist/ (deploy lên Vercel/Netlify để khoe)
+npm run smoke         # build -> npm pack -> tạo app từ template -> cài tarball -> tsc + build
+npm run dev && npm run e2e   # e2e trên preview (Chrome có sẵn; đổi bằng CHROME_PATH)
+npm run build:preview # build app demo -> preview-dist/
+npm run create-app -- <thư-mục> [--title "..."] [--core <spec>]
 ```
 
-Phát hành: tăng `version` trong `package.json` → `npm run build` → `git tag v0.x.y && git push --tags` (cài qua `github:HoangSonLe/PortalCore#v0.x.y`), hoặc `npm publish --access public` nếu muốn lên npm. **Không commit `.npmrc` có token** (đã có trong `.gitignore`).
+**Quy trình phát hành (changesets):**
+
+1. Mỗi thay đổi đáng ghi lại: `npm run changeset` → chọn patch / minor / major + mô tả ngắn (tạo file trong `.changeset/`, commit cùng code).
+2. Khi phát hành: `npm run release:version` → tăng `version` trong `package.json` + ghi [CHANGELOG.md](CHANGELOG.md).
+3. `git commit -am "release: vX.Y.Z" && git tag vX.Y.Z && git push --follow-tags` → các dự án cài qua `github:HoangSonLe/PortalCore#vX.Y.Z` (hoặc `npm publish` nếu muốn lên npm).
+
+**CI** ([.github/workflows/ci.yml](.github/workflows/ci.yml)) chạy mỗi lần push / PR: lint → format → typecheck → test → build → smoke, rồi e2e trên Chrome của runner (ảnh chụp lưu ở artifact `e2e-shots`). **Không commit `.npmrc` có token** (đã có trong `.gitignore`).
 
 ## 9. Kiểm thử
 
-**Unit test (`npm test`) — 34 test**, tập trung vào phần dễ sai nhất (thêm phần logic của các component: đổi kiểu chữ, định dạng số tiền, khoảng ngày, select phụ thuộc, gộp cây, tên file tải về):
+**Unit + component test (`npm test`) — 55 test**, tập trung vào phần dễ sai nhất. Component test dùng Testing Library với helper `tests/renderWithPortal.tsx` (render trong context giống PortalProvider, chỉnh được quyền):
+
+- Component: `PortalButton` (nhãn actionType, ẩn khi thiếu quyền, tự loading, popConfirm, icon đổi khi rê chuột, hiddenChildren), `PortalInput` (viết hoa, chặn regex), `PortalSelect` (gọi API đúng tham số, chặn khi thiếu tham số bắt buộc, `customValue`), `Can`, `ErrorBoundary`; `createMockAdapter` (khớp route, `MockError`, `mockFile`, token).
+- Logic component: đổi kiểu chữ, định dạng số tiền, khoảng ngày, `valueFormat`, select phụ thuộc, gộp cây, tên file tải về.
 
 - HTTP client: bóc `data`, thay `pathVars`, gắn token/header; **5 request cùng 401 → refresh 1 lần, mỗi request gửi lại đúng 1 lần**; **401 về muộn sau khi refresh xong → dùng token mới, không refresh lần 2**; refresh thất bại → logout 1 lần, không toast; sai mật khẩu (skipAuth) → không logout; toast lỗi/thành công.
 - Phân quyền `all`/`any`/`*`; lọc route + bỏ nhóm rỗng; tìm trang đầu tiên; match route + breadcrumb; chặn open redirect; i18n; map token/session nhiều format.
@@ -414,7 +478,7 @@ Core này được thiết kế lại dựa trên việc đọc 3 core FE ở c�
 | Upstream giữ token ở **2 nơi** (Context state + zustand) | 1 nguồn duy nhất: zustand store |
 | Chuỗi tiếng Việt viết cứng trong lớp API | Mọi chuỗi qua `t()`, có sẵn vi/en |
 | Dependency thừa (redux, redux-persist không dùng; upstream thêm cả zustand) | 2 dependency: `axios`, `zustand` |
-| Không có test | 34 unit test + 32 kịch bản e2e |
+| Không có test | 55 unit/component test + smoke + 32 kịch bản e2e, chạy trên CI |
 
 Trong lúc viết và chạy e2e, đã phát hiện và sửa thêm 3 lỗi của chính core này: side effect trong initializer của `useState` (StrictMode gọi 2 lần → gắn nhầm store), menu không sáng ở trang ẩn có path anh em (`users/:id`), và nền sider/header dark mode bị navy.
 
@@ -427,12 +491,13 @@ Trong lúc viết và chạy e2e, đã phát hiện và sửa thêm 3 lỗi củ
 
 ## 11. Giới hạn hiện tại & roadmap
 
-Chưa có (theo thứ tự nên làm):
+Đã xong ở 0.3.0: ESLint + Prettier, đồng bộ đăng xuất giữa các tab, ErrorBoundary + tự tải lại sau deploy, `valueFormat` cho ngày, nhớ cài đặt cột, `useCrudPage`, mock adapter, template + `create-app`, smoke test, CI, test component, changesets.
 
-- [ ] Cấu hình ESLint + Prettier (hiện mới có `tsc` strict)
-- [ ] Đồng bộ đăng xuất giữa các tab (`storage` event)
-- [ ] Component upload file / ảnh đại diện, xuất Excel
+Còn lại (làm khi có nhu cầu):
+
+- [ ] Realtime: hook cho SignalR (backend .NET) hoặc MQTT
 - [ ] Bộ component bản đồ (port ý tưởng từ PortalKit khi có dự án cần)
 - [ ] Trang đổi mật khẩu / hồ sơ cá nhân dựng sẵn
-- [ ] Nâng antd 6 khi ProComponents hỗ trợ
-- [ ] CI GitHub Actions: typecheck + test + build preview
+- [ ] Cache dữ liệu (TanStack Query) nếu dự án nhiều màn hình dùng chung dữ liệu
+- [ ] Nâng antd 6 / react-router 8 khi ProComponents hỗ trợ
+- [ ] Kiểm tra key i18n lúc biên dịch
