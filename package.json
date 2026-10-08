@@ -1,6 +1,6 @@
 {
   "name": "@hoangsonle/portal-core",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Core FE cho web admin/portal: provider, auth adapter, HTTP client, router phân quyền, layout, component dùng chung (React 19 + antd 5 + ProComponents).",
   "license": "MIT",
   "type": "module",
@@ -35,7 +35,7 @@
     "smoke": "node scripts/smoke-consumer.mjs",
     "changeset": "changeset",
     "release:version": "changeset version",
-    "prepare": "node scripts/prepare.mjs"
+    "release:tag": "node scripts/release-tag.mjs"
   },
   "dependencies": {
     "axios": "^1.20.0",

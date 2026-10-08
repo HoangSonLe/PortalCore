@@ -2,6 +2,12 @@
 
 Từ 0.3.0 trở đi, mỗi thay đổi ghi bằng `npm run changeset`; `npm run release:version` sẽ tự thêm mục mới vào đầu file này.
 
+## 0.3.1
+
+### Patch Changes
+
+- d9b0bc2: Sửa lỗi cài core từ GitHub (`github:HoangSonLe/PortalCore#vX.Y.Z`) báo "Failed to resolve entry for package": tag phát hành giờ trỏ tới commit có sẵn `dist/` (`npm run release:tag`), main vẫn không commit dist. Template chạy được tại chỗ (`cd template && yarn && yarn dev`), bật sẵn backend giả khi dev qua `.env.development`.
+
 ## 0.3.0
 
 ### Thêm mới

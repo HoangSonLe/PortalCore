@@ -95,7 +95,7 @@ npm install ../PortalCore/hoangsonle-portal-core-x.y.z.tgz
 npm install github:HoangSonLe/PortalCore#v0.3.1   # yarn add ... cũng được
 ```
 
-Repo không commit `dist/`: khi cài từ GitHub, npm/yarn tự cài devDependencies của core rồi chạy script `prepare` để build (mất ~30s–1 phút lần đầu). Bản `v0.3.0` thiếu bước này nên cài từ GitHub sẽ lỗi `Failed to resolve entry for package "@hoangsonle/portal-core"` — dùng từ `v0.3.1`.
+Nhánh `main` không commit `dist/`; mỗi tag phát hành trỏ tới một commit = main + `dist/` đã build (tạo bằng `npm run release:tag`), nên npm/yarn/pnpm cài từ tag là dùng được ngay. Vì vậy **luôn cài theo tag**, không cài theo `#main` hay hash commit trên main. Tag `v0.3.0` tạo trước khi có cơ chế này nên cài từ GitHub sẽ lỗi `Failed to resolve entry for package "@hoangsonle/portal-core"` — dùng từ `v0.3.1`.
 
 Cài peer dependency (dùng chung bản với app):
 
@@ -435,7 +435,9 @@ npm run create-app -- <thư-mục> [--title "..."] [--core <spec>]
 
 1. Mỗi thay đổi đáng ghi lại: `npm run changeset` → chọn patch / minor / major + mô tả ngắn (tạo file trong `.changeset/`, commit cùng code).
 2. Khi phát hành: `npm run release:version` → tăng `version` trong `package.json` + ghi [CHANGELOG.md](CHANGELOG.md).
-3. Nâng tag core trong `template/package.json`, rồi `git commit -am "release: vX.Y.Z" && git tag vX.Y.Z && git push --follow-tags` → các dự án cài qua `github:HoangSonLe/PortalCore#vX.Y.Z` (hoặc `npm publish` nếu muốn lên npm).
+3. Nâng tag core trong `template/package.json`, rồi `git commit -am "release: vX.Y.Z"`.
+4. `npm run release:tag` → build rồi tạo tag `vX.Y.Z` trên commit HEAD + `dist/` (nhánh main không đổi). **Đừng `git tag` tay**: tag không có `dist/` thì dự án cài từ GitHub sẽ lỗi.
+5. `git push origin main vX.Y.Z` → các dự án cài qua `github:HoangSonLe/PortalCore#vX.Y.Z` (hoặc `npm publish` nếu muốn lên npm).
 
 **CI** ([.github/workflows/ci.yml](.github/workflows/ci.yml)) chạy mỗi lần push / PR: lint → format → typecheck → test → build → smoke, rồi e2e trên Chrome của runner (ảnh chụp lưu ở artifact `e2e-shots`). **Không commit `.npmrc` có token** (đã có trong `.gitignore`).
 
