@@ -8,3 +8,8 @@ preview-dist
 .env.local
 e2e/shots
 .smoke
+
+# chạy thử template/ tại chỗ
+template/package-lock.json
+template/yarn.lock
+template/.env.local

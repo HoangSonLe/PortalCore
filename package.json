@@ -34,7 +34,8 @@
     "create-app": "node scripts/create-app.mjs",
     "smoke": "node scripts/smoke-consumer.mjs",
     "changeset": "changeset",
-    "release:version": "changeset version"
+    "release:version": "changeset version",
+    "prepare": "node scripts/prepare.mjs"
   },
   "dependencies": {
     "axios": "^1.20.0",

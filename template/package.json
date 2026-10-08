@@ -12,7 +12,7 @@
     "@ant-design/icons": "^5.6.1",
     "@ant-design/pro-components": "^2.8.10",
     "@ant-design/v5-patch-for-react-19": "^1.0.3",
-    "@hoangsonle/portal-core": "__CORE_SPEC__",
+    "@hoangsonle/portal-core": "github:HoangSonLe/PortalCore#v0.3.1",
     "antd": "^5.29.3",
     "dayjs": "^1.11.23",
     "react": "^19.2.0",

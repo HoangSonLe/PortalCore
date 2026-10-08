@@ -65,7 +65,11 @@ if (!coreSpec) {
 console.log('› Tạo dự án từ template...');
 cpSync(join(root, 'template'), targetDir, {
   recursive: true,
-  filter: source => !/[\\/](node_modules|dist)([\\/]|$)/.test(relative(root, source)),
+  // Bỏ những gì sinh ra khi chạy thử template/ tại chỗ.
+  filter: source =>
+    !/[\\/](node_modules|dist)([\\/]|$)|[\\/](package-lock\.json|yarn\.lock|\.env\.local)$/.test(
+      relative(root, source),
+    ),
 });
 
 // npm bỏ qua file .gitignore khi publish, nên template lưu tên không có dấu chấm.
@@ -89,10 +93,7 @@ const replaceIn = dir => {
     if (!/\.(json|ts|tsx|html|md|js|conf|sh|example)$/.test(entry) && !entry.startsWith('.')) continue;
 
     const content = readFileSync(file, 'utf8');
-    const next = content
-      .replaceAll('__APP_NAME__', appName)
-      .replaceAll('__APP_TITLE__', title)
-      .replaceAll('__CORE_SPEC__', coreSpec);
+    const next = content.replaceAll('__APP_NAME__', appName).replaceAll('__APP_TITLE__', title);
 
     if (next !== content) writeFileSync(file, next);
   }
@@ -100,11 +101,17 @@ const replaceIn = dir => {
 
 replaceIn(targetDir);
 
+// template/package.json trỏ core lên GitHub để chạy thử tại chỗ được; dự án mới dùng spec đã chọn.
+const pkgFile = join(targetDir, 'package.json');
+const pkg = JSON.parse(readFileSync(pkgFile, 'utf8'));
+
+pkg.dependencies['@hoangsonle/portal-core'] = coreSpec;
+writeFileSync(pkgFile, JSON.stringify(pkg, null, 2) + '\n');
+
 console.log(`
 ✓ Đã tạo ${targetDir}
 
   cd ${relative(process.cwd(), targetDir) || '.'}
   npm install
-  cp .env.example .env.local
-  npm run dev        # đăng nhập admin / admin (backend giả)
+  npm run dev        # đăng nhập admin / admin (backend giả, bật sẵn trong .env.development)
 `);

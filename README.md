@@ -76,10 +76,12 @@ e2e/            Kịch bản Playwright chạy trên preview
 ```bash
 cd D:\repos\Private\PortalCore
 npm run create-app -- ../MyApp --title "Quản lý kho"
-cd ../MyApp && npm install && cp .env.example .env.local && npm run dev   # admin / admin
+cd ../MyApp && npm install && npm run dev   # backend giả bật sẵn khi dev, đăng nhập admin / admin
 ```
 
-Dự án mới có sẵn: `main.tsx`, routes, tầng API, backend giả (`src/api/mock.ts`), một trang CRUD mẫu dùng `useCrudPage`, Dockerfile + nginx + script sinh `env.js` lúc container khởi động. Core được đóng gói bằng `npm pack` và cài từ `vendor/*.tgz` (không symlink nên không bị trùng React). Muốn cài từ GitHub: `--core github:HoangSonLe/PortalCore#v0.3.0`.
+Dự án mới có sẵn: `main.tsx`, routes, tầng API, backend giả (`src/api/mock.ts`), một trang CRUD mẫu dùng `useCrudPage`, Dockerfile + nginx + script sinh `env.js` lúc container khởi động. Core được đóng gói bằng `npm pack` và cài từ `vendor/*.tgz` (không symlink nên không bị trùng React). Muốn cài từ GitHub: `--core github:HoangSonLe/PortalCore#v0.3.1`.
+
+Chạy thử thẳng thư mục `template/` cũng được (`cd template && yarn && yarn dev`): khi đó core được cài từ GitHub theo tag ghi trong `template/package.json` — nhớ nâng tag này mỗi lần phát hành.
 
 ### 3.1b Cài thủ công vào dự án có sẵn
 
@@ -89,9 +91,11 @@ npm run build && npm pack          # -> hoangsonle-portal-core-x.y.z.tgz
 # trong dự án
 npm install ../PortalCore/hoangsonle-portal-core-x.y.z.tgz
 
-# Hoặc từ GitHub (sau khi push repo)
-npm install github:HoangSonLe/PortalCore#v0.3.0
+# Hoặc từ GitHub (repo private: máy cài phải đăng nhập được GitHub)
+npm install github:HoangSonLe/PortalCore#v0.3.1   # yarn add ... cũng được
 ```
+
+Repo không commit `dist/`: khi cài từ GitHub, npm/yarn tự cài devDependencies của core rồi chạy script `prepare` để build (mất ~30s–1 phút lần đầu). Bản `v0.3.0` thiếu bước này nên cài từ GitHub sẽ lỗi `Failed to resolve entry for package "@hoangsonle/portal-core"` — dùng từ `v0.3.1`.
 
 Cài peer dependency (dùng chung bản với app):
 
@@ -431,7 +435,7 @@ npm run create-app -- <thư-mục> [--title "..."] [--core <spec>]
 
 1. Mỗi thay đổi đáng ghi lại: `npm run changeset` → chọn patch / minor / major + mô tả ngắn (tạo file trong `.changeset/`, commit cùng code).
 2. Khi phát hành: `npm run release:version` → tăng `version` trong `package.json` + ghi [CHANGELOG.md](CHANGELOG.md).
-3. `git commit -am "release: vX.Y.Z" && git tag vX.Y.Z && git push --follow-tags` → các dự án cài qua `github:HoangSonLe/PortalCore#vX.Y.Z` (hoặc `npm publish` nếu muốn lên npm).
+3. Nâng tag core trong `template/package.json`, rồi `git commit -am "release: vX.Y.Z" && git tag vX.Y.Z && git push --follow-tags` → các dự án cài qua `github:HoangSonLe/PortalCore#vX.Y.Z` (hoặc `npm publish` nếu muốn lên npm).
 
 **CI** ([.github/workflows/ci.yml](.github/workflows/ci.yml)) chạy mỗi lần push / PR: lint → format → typecheck → test → build → smoke, rồi e2e trên Chrome của runner (ảnh chụp lưu ở artifact `e2e-shots`). **Không commit `.npmrc` có token** (đã có trong `.gitignore`).
 

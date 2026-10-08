@@ -5,9 +5,8 @@ Dự án tạo từ template của `@hoangsonle/portal-core`.
 ## Chạy
 
 ```bash
-npm install
-cp .env.example .env.local   # VITE_USE_MOCK=true: dùng backend giả, đăng nhập admin / admin
-npm run dev                  # http://localhost:5173
+npm install                  # hoặc yarn
+npm run dev                  # http://localhost:5173 — backend giả (.env.development), đăng nhập admin / admin
 ```
 
 ## Cấu trúc
@@ -25,7 +24,7 @@ src/
 
 ## Nối backend thật
 
-1. `.env.local`: `VITE_USE_MOCK=false`, `VITE_API_URL=https://api.cua-ban`.
+1. `cp .env.example .env.local` rồi đặt `VITE_USE_MOCK=false`, `VITE_API_URL=https://api.cua-ban` (`.env.local` đè `.env.development`).
 2. Sửa `authAdapter` trong `src/api/http.ts` (endpoint login/refresh/me, map response). README của portal-core có ví dụ cho backend .NET.
 
 ## Deploy bằng Docker
